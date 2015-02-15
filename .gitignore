@@ -10,3 +10,8 @@ lib/libipfix.so*
 libmisc/libmisc.so*
 probe/ipfix_probe
 config.h
+cscope.*
+*.[oa]
+10.*.*.*
+.depend
+config.log
