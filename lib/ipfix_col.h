@@ -29,7 +29,7 @@ extern "C" {
 #define DFLT_MYSQL_USER      "ipfix"
 #define DFLT_MYSQL_PASSWORD  "ipfix"
 
-#define MAXTEMPLIDENT        120
+#define MAXTEMPLIDENT        240
 
 typedef enum {
     IPFIX_INPUT_FILE, IPFIX_INPUT_IPCON
