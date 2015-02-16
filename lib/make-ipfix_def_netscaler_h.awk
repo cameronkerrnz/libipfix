@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 BEGIN {
-	FS = ","
+	FS = "|"
 	i=0
 	print "/*\n * NETSCALER IPFIX defines\n *\n * This is a generated file. Do not edit! \n *\n */\n#ifndef IPFIX_NETSCALER_DEF_H\n#define IPFIX_NETSCALER_DEF_H\n\n#define IPFIX_ENO_NETSCALER\t5951\n\n"
 }

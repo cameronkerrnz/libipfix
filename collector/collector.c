@@ -44,6 +44,7 @@ $$LIC$$
 #include "ipfix_fields_fokus.h"
 #include "ipfix_def_netscaler.h"
 #include "ipfix_fields_netscaler.h"
+#include "ipfix_reverse_fields_netscaler.h"
 
 #include "mlog.h"
 #include "mpoll.h"
@@ -463,19 +464,19 @@ int main (int argc, char *argv[])
     /** init ipfix lib
      */
     if ( ipfix_init() <0 ) {
-        fprintf( stderr, "ipfix_init() failed adding base types: %s\n", strerror(errno) );
+        fprintf( stderr, "ipfix_init() failed: %s\n", strerror(errno) );
         exit(1);
     }
     if ( ipfix_add_vendor_information_elements( ipfix_ft_fokus ) <0 ) {
-        fprintf( stderr, "ipfix_add_ie() failed adding Fokus types: %s\n", strerror(errno) );
+        fprintf( stderr, "ipfix_add_vendor_information_elements() failed adding Fokus types: %s\n", strerror(errno) );
         exit(1);
     }
     if ( ipfix_add_vendor_information_elements( ipfix_ft_netscaler ) <0 ) {
-        fprintf( stderr, "ipfix_add_ie() failed adding Netscaler types: %s\n", strerror(errno) );
+        fprintf( stderr, "ipfix_add_vendor_information_elements() failed adding Netscaler types: %s\n", strerror(errno) );
         exit(1);
     }
     if ( ipfix_add_vendor_information_elements( ipfix_reverse_ft_netscaler ) <0 ) {
-        fprintf( stderr, "ipfix_add_ie() failed adding Netscaler reverse types: %s\n", strerror(errno) );
+        fprintf( stderr, "ipfix_add_vendor_information_elements() failed adding Netscaler reverse types: %s\n", strerror(errno) );
         exit(1);
     }
 

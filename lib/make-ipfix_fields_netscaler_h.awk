@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 BEGIN {
-	FS = ","
+	FS = "|"
 	print "/*\n * IPFIX structs, types and definitions\n *\n * This is a generated file. Do not edit! \n *\n */\n\n/*\n * ipfix information element list\n */\nipfix_field_type_t ipfix_ft_netscaler[] = {"
 
 }
