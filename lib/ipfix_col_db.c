@@ -167,6 +167,10 @@ int ipfix_export_drecord_db( ipfixs_node_t      *s,
               t->tablename, IPFIX_DB_DT_MSGID, s->last_msgid );
     nbytes = strlen(query);
     for ( i=0; i<t->ipfixt->nfields; i++ ) {
+        if ( t->ipfixt->fields[i].elem->ft->eno == 0 
+             && t->ipfixt->fields[i].elem->ft->ftype == 0xD2 ) {
+             continue; /* D2 == 210, paddingOctets */
+        }
 #ifdef IENAME_COLUMNS
         nbytes += snprintf( query+nbytes, sizeof(query)-nbytes, ", %s='",
                             t->ipfixt->fields[i].elem->ft->name );

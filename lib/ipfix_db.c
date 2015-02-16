@@ -240,7 +240,14 @@ int ipfix_db_create_table( MYSQL *mysql, char *tablename, ipfix_template_t *t )
     snprintf( query, MAXQUERYLEN,
               "CREATE TABLE %s ( %s INT UNSIGNED NOT NULL",
               tablename, IPFIX_DB_DT_MSGID );
+
     for ( i=0; i<t->nfields; i++ ) {
+
+        if ( t->fields[i].elem->ft->eno == 0
+             && t->fields[i].elem->ft->ftype == 0xD2 ) {
+             continue; /* D2 == 210, paddingOctets */
+        }
+
         if ( ipfix_db_get_columnname( t->fields[i].elem->ft->eno,
                                       t->fields[i].elem->ft->ftype,
                                       tmpbuf, sizeof(tmpbuf)) <0 ) {
