@@ -47,6 +47,9 @@ $$LIC$$
 #include "ipfix.h"
 #include "ipfix_fields.h"
 #include "ipfix_reverse_fields.h"
+#include "ipfix_def_netscaler.h"
+#include "ipfix_fields_netscaler.h"
+#include "ipfix_reverse_fields_netscaler.h"
 #ifdef SSLSUPPORT
 #include "ipfix_ssl.h"
 #endif

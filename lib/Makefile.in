@@ -77,4 +77,5 @@ ipfix_%_netscaler.h: ipfix_NETSCALER_IEs.txt make-ipfix_%_netscaler_h.awk
 
 ipfix_reverse_%_netscaler.h: ipfix_%_netscaler.h make-ipfix_%_netscaler_h.awk
 	sed -f make-reverse-IPFIX_FIELDS_H.sed-script-file $< > $@
+	sed -i s,ipfix_ft_netscaler,ipfix_reverse_ft_netscaler, $@
 
