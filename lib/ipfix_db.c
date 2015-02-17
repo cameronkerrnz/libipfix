@@ -125,9 +125,9 @@ int ipfix_db_open( MYSQL **mysqlp,
     /* check if ipfix exporters table exists
      */
     snprintf( sql, MAXQUERYLEN,
-              "CREATE TABLE %s ( "
-              " %s INT NOT NULL AUTO_INCREMENT, %s INT UNSIGNED NOT NULL,"
-              " %s BLOB NOT NULL, %s BLOB, PRIMARY KEY (%s) ) ",
+              "CREATE TABLE `%s` ( "
+              " `%s` INT NOT NULL AUTO_INCREMENT, `%s` INT UNSIGNED NOT NULL,"
+              " `%s` BLOB NOT NULL, `%s` BLOB, PRIMARY KEY (`%s`) ) ",
               IPFIX_DB_EXPORTERS,
               IPFIX_DB_EXP_ID, IPFIX_DB_EXP_ODID, IPFIX_DB_EXP_ADDR,
               IPFIX_DB_EXP_DESCR, IPFIX_DB_EXP_ID );
@@ -141,9 +141,9 @@ int ipfix_db_open( MYSQL **mysqlp,
     /* check if ipfix message table exists
      */
     snprintf( sql, MAXQUERYLEN,
-              "CREATE TABLE %s ( "
-              " %s INT NOT NULL AUTO_INCREMENT, "
-              " %s INT NOT NULL, %s INT NOT NULL, PRIMARY KEY (%s) ) ",
+              "CREATE TABLE `%s` ( "
+              " `%s` INT NOT NULL AUTO_INCREMENT, "
+              " `%s` INT NOT NULL, `%s` INT NOT NULL, PRIMARY KEY (`%s`) ) ",
               IPFIX_DB_MESSAGETABLE,
               IPFIX_DB_MSGT_ID, IPFIX_DB_MSGT_EXPID,
               IPFIX_DB_MSGT_TIME, IPFIX_DB_MSGT_ID );
@@ -157,9 +157,9 @@ int ipfix_db_open( MYSQL **mysqlp,
     /** check if ipfix templates table exists
      */
     snprintf( sql, MAXQUERYLEN,
-              "CREATE TABLE %s ( "
-              " %s INT NOT NULL AUTO_INCREMENT, "
-              " %s BLOB, %s BLOB, PRIMARY KEY (%s) ) ",
+              "CREATE TABLE `%s` ( "
+              " `%s` INT NOT NULL AUTO_INCREMENT, "
+              " `%s` BLOB, `%s` BLOB, PRIMARY KEY (`%s`) ) ",
               IPFIX_DB_TEMPLATETABLE,
               IPFIX_DB_TMPL_ID, IPFIX_DB_TMPL_IDENT,
               IPFIX_DB_TMPL_TABLENAME, IPFIX_DB_TMPL_ID );
@@ -173,8 +173,8 @@ int ipfix_db_open( MYSQL **mysqlp,
     /** check if mapping table exists
      */
     snprintf( sql, MAXQUERYLEN,
-              "CREATE TABLE %s ( "
-              " %s INT NOT NULL, %s INT NOT NULL, INDEX(%s) ) ",
+              "CREATE TABLE `%s` ( "
+              " `%s` INT NOT NULL, `%s` INT NOT NULL, INDEX(`%s`) ) ",
               IPFIX_DB_MAPPINGTABLE, IPFIX_DB_MT_MSGID,
               IPFIX_DB_MT_TMPLID, IPFIX_DB_MT_MSGID );
 
@@ -238,7 +238,7 @@ int ipfix_db_create_table( MYSQL *mysql, char *tablename, ipfix_template_t *t )
     /** build query
      */
     snprintf( query, MAXQUERYLEN,
-              "CREATE TABLE %s ( %s INT UNSIGNED NOT NULL",
+              "CREATE TABLE `%s` ( `%s` INT UNSIGNED NOT NULL",
               tablename, IPFIX_DB_DT_MSGID );
 
     for ( i=0; i<t->nfields; i++ ) {
@@ -257,26 +257,26 @@ int ipfix_db_create_table( MYSQL *mysql, char *tablename, ipfix_template_t *t )
         switch( t->fields[i].elem->ft->coding ) {
           case IPFIX_CODING_INT:
               snprintf( query+strlen(query), MAXQUERYLEN-strlen(query),
-                        ", %s %sINT ", tmpbuf,
+                        ", `%s` %sINT ", tmpbuf,
                         (t->fields[i].elem->ft->length>4)?"BIG":"" );
               break;
           case IPFIX_CODING_UINT:
               snprintf( query+strlen(query), MAXQUERYLEN-strlen(query),
-                        ", %s %sINT UNSIGNED ", tmpbuf,
+                        ", `%s` %sINT UNSIGNED ", tmpbuf,
                         (t->fields[i].elem->ft->length>4)?"BIG":"" );
               break;
           case IPFIX_CODING_STRING:
               snprintf( query+strlen(query), MAXQUERYLEN-strlen(query),
-                        ", %s TEXT ", tmpbuf );
+                        ", `%s` TEXT ", tmpbuf );
               break;
           case IPFIX_CODING_BYTES:
               snprintf( query+strlen(query), MAXQUERYLEN-strlen(query),
-                        ", %s VARBINARY(%lu) ", tmpbuf,
+                        ", `%s` VARBINARY(%lu) ", tmpbuf,
                         (t->fields[i].elem->ft->length<MAXBINARYIELEN)?(t->fields[i].elem->ft->length):(unsigned long)MAXBINARYIELEN);
               break;
           default:
               snprintf( query+strlen(query), MAXQUERYLEN-strlen(query),
-                        ", %s VARBINARY(%d) ", tmpbuf, MAXBINARYIELEN );
+                        ", `%s` VARBINARY(%d) ", tmpbuf, MAXBINARYIELEN );
               break;
         }
     }
@@ -411,7 +411,7 @@ int ipfix_db_get_tablename( MYSQL *mysql, char *tablename, size_t tablenamelen,
          */
         mysql_free_result(result);
         snprintf( query, MAXQUERYLEN,
-                  "INSERT INTO %s SET %s='x', %s='x' ",
+                  "INSERT INTO `%s` SET `%s`='x', `%s`='x' ",
                   IPFIX_DB_TEMPLATETABLE, IPFIX_DB_TMPL_IDENT,
                   IPFIX_DB_TMPL_TABLENAME );
 
@@ -437,7 +437,7 @@ int ipfix_db_get_tablename( MYSQL *mysql, char *tablename, size_t tablenamelen,
         /** update entry
          */
         snprintf( query, MAXQUERYLEN,
-                  "UPDATE %s SET %s='%s', %s='%s' WHERE %s='%d' ",
+                  "UPDATE `%s` SET `%s`='%s', `%s`='%s' WHERE `%s`='%d' ",
                   IPFIX_DB_TEMPLATETABLE, IPFIX_DB_TMPL_IDENT, ident,
                   IPFIX_DB_TMPL_TABLENAME, tablename, IPFIX_DB_TMPL_ID, id );
         if ( mysql_query( mysql, query ) !=0 ) {
@@ -500,7 +500,7 @@ int ipfix_db_get_columnname( int eno, int type, char *buf, size_t buflen )
 #ifdef IENAME_COLUMNS
     ipfix_field_t *elem;
 
-    if ( (elem=ipfix_get_ftinfo( int eno, int type )) !=NULL ) {
+    if ( (elem=ipfix_get_ftinfo(eno, type )) !=NULL ) {
         snprintf( buf, buflen, "%s", elem->ft->name );
         return 0;
     }

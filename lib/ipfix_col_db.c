@@ -84,7 +84,7 @@ int ipfix_export_newsrc_db( ipfixs_node_t *s, void *arg )
 
     if ( exporter_id == 0 ) {
         snprintf( query, MAXQUERYLEN, 
-                  "INSERT INTO %s SET %s='%u', %s='%s', %s='-'", 
+                  "INSERT INTO `%s` SET `%s`='%u', `%s`='%s', `%s`='-'", 
                   IPFIX_DB_EXPORTERS, IPFIX_DB_EXP_ODID, s->odid,
                   IPFIX_DB_EXP_ADDR, ipfix_col_input_get_ident( s->input ),
                   IPFIX_DB_EXP_DESCR );
@@ -106,7 +106,7 @@ int ipfix_export_newmsg_db( ipfixs_node_t *s, ipfix_hdr_t *hdr, void *arg )
 
     if ( data->mysql ) {
         snprintf( query, MAXQUERYLEN, 
-                  "INSERT INTO %s SET %s='%u', %s='%lu'", 
+                  "INSERT INTO `%s` SET `%s`='%u', `%s`='%lu'", 
                   IPFIX_DB_MESSAGETABLE,
                   IPFIX_DB_MSGT_EXPID, s->exporterid, IPFIX_DB_MSGT_TIME, 
                   (hdr->version==IPFIX_VERSION_NF9)?
@@ -163,7 +163,7 @@ int ipfix_export_drecord_db( ipfixs_node_t      *s,
      * todo: log error if query buffer is too small
      */
     snprintf( query, MAXQUERYLEN, 
-              "INSERT INTO %s SET %s='%u'", 
+              "INSERT INTO `%s` SET `%s`='%u'", 
               t->tablename, IPFIX_DB_DT_MSGID, s->last_msgid );
     nbytes = strlen(query);
     for ( i=0; i<t->ipfixt->nfields; i++ ) {
@@ -172,7 +172,7 @@ int ipfix_export_drecord_db( ipfixs_node_t      *s,
              continue; /* D2 == 210, paddingOctets */
         }
 #ifdef IENAME_COLUMNS
-        nbytes += snprintf( query+nbytes, sizeof(query)-nbytes, ", %s='",
+        nbytes += snprintf( query+nbytes, sizeof(query)-nbytes, ", `%s`='",
                             t->ipfixt->fields[i].elem->ft->name );
 #else
         nbytes += snprintf( query+nbytes, sizeof(query)-nbytes,
@@ -211,7 +211,7 @@ int ipfix_export_drecord_db( ipfixs_node_t      *s,
      */
     if ( t->message_snr != s->last_message_snr ) {
         snprintf( query, MAXQUERYLEN, 
-                  "INSERT INTO %s SET %s=%u, %s=%u ", 
+                  "INSERT INTO `%s` SET `%s`=%u, `%s`=%u ", 
                   IPFIX_DB_MAPPINGTABLE, IPFIX_DB_MT_MSGID,
                   s->last_msgid, IPFIX_DB_MT_TMPLID, t->template_id );
         mlogf( 4, "[%s] query: %s\n", func, query );
