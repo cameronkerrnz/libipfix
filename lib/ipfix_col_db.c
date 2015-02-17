@@ -43,6 +43,7 @@ $$LIC$$
 typedef struct ipfix_export_data_db
 {
     MYSQL *mysql;
+    char *json_filename;
 } ipfixe_data_db_t;
 #endif
 
@@ -233,7 +234,9 @@ int ipfix_export_drecord_db( ipfixs_node_t      *s,
 }
 
 int ipfix_export_init_db( char *dbhost, char *dbuser,
-                          char *dbpw, char *dbname, void **arg )
+                          char *dbpw, char *dbname,
+                          char *opt_jsonfile,
+                          void **arg )
 {
     ipfixe_data_db_t *data;
 
@@ -244,6 +247,8 @@ int ipfix_export_init_db( char *dbhost, char *dbuser,
         free(data);
         return -1;
     }
+
+    data->json_filename = opt_jsonfile;
 
     *arg = (void**)data;
     return 0;
@@ -270,7 +275,7 @@ int ipfix_col_init_mysqlexport( char *dbhost, char *dbuser,
 #ifdef DBSUPPORT
     void *data;
 
-    if ( ipfix_export_init_db( dbhost, dbuser, dbpw, dbname, &data ) <0 ) {
+    if ( ipfix_export_init_db( dbhost, dbuser, dbpw, dbname, opt_jsonfile, &data ) <0 ) {
         return -1;
     }
 
