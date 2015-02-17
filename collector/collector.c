@@ -70,6 +70,7 @@ typedef struct ipfix_collector_opts
     char           *dbpw;        /* db password */
     char           *dbname;      /* db name     */
     char           *dbhost;      /* hostname    */
+    char           *jsonfile;    /* filename    */
 
     int            udp;          /* support udp clients  */
     int            tcp;          /* support tcp packets  */
@@ -120,6 +121,7 @@ static void usage( char *taskname)
         "  --dbname <database>  db name\n"
         "  --dbuser <user>      db user\n"
         "  --dbpw   <password>  db password\n"
+        "  --jsonfile <filename> use db only for templates; send data as JSON lines\n"
 #else
         "  -d                   export into database\n"
 #endif
@@ -303,6 +305,7 @@ int main (int argc, char *argv[])
         { "cafile", 1, 0, 0},
         { "cadir", 1, 0, 0},
         { "help", 0, 0, 0},
+        { "jsonfile", 1, 0, 0},
         { 0, 0, 0, 0 } 
     };
 #endif
@@ -327,6 +330,7 @@ int main (int argc, char *argv[])
     par.dbname   = DFLT_MYSQL_DBNAME;
     par.dbuser   = DFLT_MYSQL_USER;
     par.dbpw     = DFLT_MYSQL_PASSWORD;
+    par.jsonfile = NULL;
 
     snprintf( par.progname, sizeof(par.progname), "%s", basename( argv[0]) );
 
@@ -372,9 +376,12 @@ int main (int argc, char *argv[])
                 case 9: /* cadir */
                     par.cadir = optarg;
                     break;
-                case 10:
+                case 10: /* help */
                     usage(par.progname);
                     exit(1);
+                case 11: /* jsonfile */
+                    par.jsonfile = optarg;
+                    break;
               }
               break;
 
@@ -460,6 +467,11 @@ int main (int argc, char *argv[])
     mlogf( 1, "[%s] listen on port %d, write to %s ...\n",
            par.progname, par.port,
            par.dbexport?"database":par.datadir?"files":"stdout" );
+
+    if ( par.dbexport && par.jsonfile ) {
+        mlogf(1, "[%s] templates go to database, data goes to file %s as one JSON document per line\n",
+              par.progname, par.jsonfile);
+    }
 
     /** init ipfix lib
      */
