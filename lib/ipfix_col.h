@@ -109,7 +109,7 @@ typedef void* ipfix_col_t;
 void ipfix_col_init( void );
 int  ipfix_col_init_fileexport( char *datadir );
 void ipfix_col_stop_fileexport( void );
-int  ipfix_col_init_mysqlexport( char *host, char *user, char *pw, char *name );
+int  ipfix_col_init_mysqlexport( char *host, char *user, char *pw, char *name, char *opt_jsonfile );
 void ipfix_col_stop_mysqlexport( void );
 int  ipfix_col_register_export( ipfix_col_info_t *colinfo );
 int  ipfix_col_cancel_export( ipfix_col_info_t *colinfo );

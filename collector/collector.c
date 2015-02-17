@@ -209,7 +209,7 @@ int do_collect()
 #ifdef DBSUPPORT
     if ( par.dbexport ) {
         if ( ipfix_col_init_mysqlexport( par.dbhost, par.dbuser,
-                                         par.dbpw, par.dbname ) <0 ) {
+                                         par.dbpw, par.dbname, par.jsonfile ) <0 ) {
             mlogf( 0, "[%s] cannot connect to database\n", par.progname );
             return -1;
         }

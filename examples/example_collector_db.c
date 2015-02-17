@@ -152,10 +152,10 @@ int main (int argc, char *argv[])
         exit(1);
     }
 
-    /** activate database export
+    /** activate database export (jsonfile is not used)
      */
     if ( ipfix_col_init_mysqlexport( dbhost, dbuser,
-                                     dbpw, dbname ) <0 ) {
+                                     dbpw, dbname, NULL ) <0 ) {
         fprintf( stderr, "cannot connect to database\n" );
         ipfix_cleanup();
         exit(1);
