@@ -83,8 +83,8 @@ void json_render_bytes_as_hexpairs_to_FILE(FILE *json_file, const void *s /* byt
 
     for (offset = 0; offset < len; offset++)
     {
-        fprintf(json_file, "%02X%s", b[offset], (offset==0)?"":" ");
-        if ((offset % 4) == 3) fputc(' ', json_file);
+        fprintf(json_file, "%s%02X", (offset==0)?"":" ", b[offset]);
+        if (((offset % 4) == 3) && (offset < len-1)) fputc(' ', json_file);
     }
     
     fputc('"', json_file);
