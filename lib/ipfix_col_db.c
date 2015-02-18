@@ -169,11 +169,15 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
     /* Write data set to a file as JSON. One JSON document per line.
      */
 
-    json_file = fopen(data->json_filename, "a");
-    if (json_file == NULL) {
-        mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
-               func, data->json_filename, strerror(errno));
-    } 
+    if (strcmp(data->json_filename, "-") == 0) {
+        json_file = stdout;
+    } else {
+        json_file = fopen(data->json_filename, "a");
+        if (json_file == NULL) {
+            mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
+                   func, data->json_filename, strerror(errno));
+        } 
+    }
 
     fprintf(json_file, "{\"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
 
@@ -262,7 +266,10 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
 
     fprintf(json_file, "}\n");
 
-    if (json_file != NULL) {
+    if (json_file == stdout) {
+        fflush(stdout); /* stdout is by default fully-buffered when not to a terminal */
+    }
+    else if (json_file != NULL) {
         fclose(json_file);
     }
     return 0;
