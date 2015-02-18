@@ -237,7 +237,7 @@ ipfix_field_t *ipfix_get_ftinfo( int eno, int ftid );
 int  ipfix_get_eno_ieid( char *field, int *eno, int *ieid );
 ipfix_field_t *ipfix_create_unknown_ftinfo( int eno, int ftid );
 void ipfix_free_unknown_ftinfo( ipfix_field_t *f );
-
+extern int ipfix_snprint_ipaddr( char *str, size_t size, void *data, size_t len );
 
 /** common funcs
  */

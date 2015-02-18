@@ -25,6 +25,7 @@ $$LIC$$
 #include <time.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <arpa/inet.h>
 
 #include "mlog.h"
 #include "misc.h"
@@ -234,8 +235,14 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
                 fprintf(json_file, "null");
                 break;
             case IPFIX_CODING_IPADDR:
-                mlogf(1, "[%s] JSON emmission of type IPADDR not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
-                fprintf(json_file, "null");
+                {
+                    char addrbuf[INET6_ADDRSTRLEN];
+
+                    ipfix_snprint_ipaddr(addrbuf, INET6_ADDRSTRLEN, d->addrs[i], d->lens[i]);
+
+                    mlogf(1, "[%s] JSON emmission of type IPADDR not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
+                    fprintf(json_file, "\"%s\"", addrbuf);
+                }
                 break;
             case IPFIX_CODING_NTP:
                 mlogf(1, "[%s] JSON emmission of type NTP not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
