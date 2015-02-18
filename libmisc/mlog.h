@@ -15,14 +15,14 @@
 extern "C" {
 #endif
 
-void errorf ( char fmt[], ... ) __attribute__ ((format (printf, 1, 2)));
-void debugf ( char fmt[], ... ) __attribute__ ((format (printf, 1, 2)));
-void mlogf  ( int verbosity,
+extern void errorf ( char fmt[], ... ) __attribute__ ((format (printf, 1, 2)));
+extern void debugf ( char fmt[], ... ) __attribute__ ((format (printf, 1, 2)));
+extern void mlogf  ( int verbosity,
               char fmt[], ... ) __attribute__ ((format (printf, 2, 3)));
-int  mlog_open  ( char *logfile, char *prefix );
-void mlog_close ( void );
-void mlog_set_vlevel( int vlevel );
-int  mlog_get_vlevel();
+extern int  mlog_open  ( char *logfile, char *prefix );
+extern void mlog_close ( void );
+extern void mlog_set_vlevel( int vlevel );
+extern int  mlog_get_vlevel();
 
 #ifdef   __cplusplus
 }
