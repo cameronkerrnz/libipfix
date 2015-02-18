@@ -68,6 +68,7 @@ typedef struct ipfix_collector_opts
     int            dbexport;     /* flag        */
     char           *dbuser;      /* db username */
     char           *dbpw;        /* db password */
+    char           *dbpw_filename; /* db password from file */
     char           *dbname;      /* db name     */
     char           *dbhost;      /* hostname    */
     char           *jsonfile;    /* filename    */
@@ -104,34 +105,35 @@ static void usage( char *taskname)
     const char helptxt[] =
         "[options]\n\n"
         "options:\n"
-        "  -h                  this help\n"
-        "  -4                  accept connections via AF_INET socket\n"
-        "  -6                  accept connections via AF_INET6 socket\n"
-        "  -o <datadir>        store files of collected data in this dir\n"
-        "  -p <portno>         listen on this port (default=4739)\n"
-        "  -s                  support SCTP clients\n"
-        "  -t                  support TCP clients\n"
-        "  -u                  support UDP clients\n"
-        "  -v                  increase verbose level\n"
+        "  -h                          this help\n"
+        "  -4                          accept connections via AF_INET socket\n"
+        "  -6                          accept connections via AF_INET6 socket\n"
+        "  -o <datadir>                store files of collected data in this dir\n"
+        "  -p <portno>                 listen on this port (default=4739)\n"
+        "  -s                          support SCTP clients\n"
+        "  -t                          support TCP clients\n"
+        "  -u                          support UDP clients\n"
+        "  -v                          increase verbose level\n"
 #ifdef DBSUPPORT
 #ifdef HAVE_GETOPT_LONG
         "db options:\n"
-        "  --db                 export into database\n"
-        "  --dbhost <hostname>  db host\n"
-        "  --dbname <database>  db name\n"
-        "  --dbuser <user>      db user\n"
-        "  --dbpw   <password>  db password\n"
-        "  --jsonfile <filename> use db only for templates; send data as JSON lines\n"
+        "  --db                        export into database\n"
+        "  --dbhost <hostname>         db host\n"
+        "  --dbname <database>         db name\n"
+        "  --dbuser <user>             db user\n"
+        "  --dbpw   <password>         db password\n"
+        "  --dbpw-filename <filename>  db password from first line of file\n"
+        "  --jsonfile <filename>       templates to db; data as JSON lines\n"
 #else
-        "  -d                   export into database\n"
+        "  -d                          export into database\n"
 #endif
 #ifdef SSLSUPPORT
         "ssl options:\n"
-        "  --ssl                expect tls/ssl clients\n"
-        "  --key    <file>      private key file to use\n"
-        "  --cert   <file>      certificate file to use\n"
-        "  --cafile <file>      file of CAs\n"
-        "  --cadir  <dir>       directory of CAs\n"
+        "  --ssl                       expect tls/ssl clients\n"
+        "  --key    <file>             private key file to use\n"
+        "  --cert   <file>             certificate file to use\n"
+        "  --cafile <file>             file of CAs\n"
+        "  --cadir  <dir>              directory of CAs\n"
 #endif
 #endif
         "\n";
@@ -287,6 +289,40 @@ int do_collect()
     return retval;
 }
 
+static int read_password_from_file(const char *dbpw_filename, char **dbpw)
+{
+    /* FIXME: note that this will leak memory because dbpw in the caller is
+     * a pointer to constant string (Text area), but if we set it here
+     * it is a pointer to heap memory, so the caller wouldn't readily know
+     * if it should be freed or not. In reality, this shouldn't be much of
+     * an issue as it the password will remain in memory for the duration
+     * of the program (which is in itself less ideal). */
+
+    FILE *dbpw_file;
+    char password[50];
+    int retval;
+
+    dbpw_file = fopen(dbpw_filename, "r");
+    if (dbpw_file == NULL) {
+        return -1;
+    }
+
+    if (fgets(password, sizeof password, dbpw_file) == NULL) {
+        password[0] = '\0';
+        *dbpw = NULL;
+        retval = -1;
+    } else {
+        if (password[strlen(password)-1] == '\n') {
+            password[strlen(password)-1] = '\0';
+        }
+        *dbpw = strdup(password);
+        retval = 0;
+    }
+    
+    fclose(dbpw_file);
+    return retval;
+}
+
 int main (int argc, char *argv[])
 {
     char          arg;          /* short options: character */
@@ -306,31 +342,33 @@ int main (int argc, char *argv[])
         { "cadir", 1, 0, 0},
         { "help", 0, 0, 0},
         { "jsonfile", 1, 0, 0},
+        { "dbpw-filename", 1, 0, 0},
         { 0, 0, 0, 0 } 
     };
 #endif
 
     /** set default options
      */
-    par.tcp     = 0;
-    par.udp     = 0;
-    par.sctp    = 0;
-    par.ssl     = 0;
-    par.cafile  = CAFILE;
-    par.cadir   = CADIR;
-    par.keyfile = KEYFILE;
-    par.certfile= CERTFILE;
-    par.port    = 0;
-    par.family  = AF_UNSPEC;
-    par.logfile = NULL;
-    par.maxcon  = 10;
-    par.datadir  = NULL;
-    par.dbexport = 0;
-    par.dbhost   = DFLT_MYSQL_HOST;
-    par.dbname   = DFLT_MYSQL_DBNAME;
-    par.dbuser   = DFLT_MYSQL_USER;
-    par.dbpw     = DFLT_MYSQL_PASSWORD;
-    par.jsonfile = NULL;
+    par.tcp            =  0;
+    par.udp            =  0;
+    par.sctp           =  0;
+    par.ssl            =  0;
+    par.cafile         =  CAFILE;
+    par.cadir          =  CADIR;
+    par.keyfile        =  KEYFILE;
+    par.certfile       =  CERTFILE;
+    par.port           =  0;
+    par.family         =  AF_UNSPEC;
+    par.logfile        =  NULL;
+    par.maxcon         =  10;
+    par.datadir        =  NULL;
+    par.dbexport       =  0;
+    par.dbhost         =  DFLT_MYSQL_HOST;
+    par.dbname         =  DFLT_MYSQL_DBNAME;
+    par.dbuser         =  DFLT_MYSQL_USER;
+    par.dbpw           =  DFLT_MYSQL_PASSWORD;
+    par.dbpw_filename  =  NULL;
+    par.jsonfile       =  NULL;
 
     snprintf( par.progname, sizeof(par.progname), "%s", basename( argv[0]) );
 
@@ -381,6 +419,9 @@ int main (int argc, char *argv[])
                     exit(1);
                 case 11: /* jsonfile */
                     par.jsonfile = optarg;
+                    break;
+                case 12: /* dbpw-filename */
+                    par.dbpw_filename = optarg;
                     break;
               }
               break;
@@ -449,6 +490,18 @@ int main (int argc, char *argv[])
     if ( !par.dbexport && !par.datadir ) {
         fprintf( stderr, "info: message dump, no data storage.\n" );
         fflush( stderr );
+    }
+    if ( par.dbexport ) {
+        if ( (strcmp(par.dbpw, DFLT_MYSQL_PASSWORD) != 0 && par.dbpw_filename != NULL) ) {
+            fprintf( stderr, "error: don't specify both --dbpw and --dbpw-filename.\n" );
+            exit(1);
+        } else if (par.dbpw_filename != NULL ) {
+            if (read_password_from_file(par.dbpw_filename, &par.dbpw) < 0) {
+                fprintf( stderr, "error: could not read database password from file '%s': %s\n",
+                    par.dbpw_filename, strerror(errno) );
+                exit(1);
+            }
+        }
     }
 
     if ( par.port==0 ) {
