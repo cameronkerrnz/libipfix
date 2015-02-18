@@ -20,6 +20,7 @@ $$LIC$$
 #include <errno.h>
 #include <sys/time.h>
 
+#include "mlog.h"
 #include "misc.h"
 #include "ipfix_db.h"
 
