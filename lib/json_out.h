@@ -13,5 +13,9 @@ extern void json_render_string_to_FILE(FILE *out, const char *s, int len);
 
 extern void json_render_bytes_as_hexpairs_to_FILE(FILE *out, const void *s /* bytes */, int len);
 
+/* eg. 2015-02-19T01:15:58.938Z */
+
+extern void json_render_NTP_timestamp_to_FILE(FILE *json_file, const void *addr, int len);
+
 #endif /* __JSON_OUT_H */
 

@@ -240,13 +240,11 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
 
                     ipfix_snprint_ipaddr(addrbuf, INET6_ADDRSTRLEN, d->addrs[i], d->lens[i]);
 
-                    mlogf(1, "[%s] JSON emmission of type IPADDR not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
                     fprintf(json_file, "\"%s\"", addrbuf);
                 }
                 break;
             case IPFIX_CODING_NTP:
-                mlogf(1, "[%s] JSON emmission of type NTP not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
-                fprintf(json_file, "null");
+                json_render_NTP_timestamp_to_FILE(json_file, d->addrs[i], d->lens[i]);
                 break;
             case IPFIX_CODING_STRING:
                 // don't forget JSON is meant to be UTF-8; IPFIX/Netscaler is ....?
