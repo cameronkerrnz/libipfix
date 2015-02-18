@@ -9,6 +9,9 @@ prefix = @prefix@
 
 SUBDIRS = lib libmisc examples collector probe
 
+pkgconfigdir = @libdir@/pkgconfig
+INST_PKGCONFIG = libipfix.pc
+
 .PHONY: subdirs $(SUBDIRS)
 
 all: subdirs
@@ -25,10 +28,17 @@ examples collector probe: lib libmisc
 $(SUBDIRS):
 	$(MAKE) -C $@ $(filter-out $(SUBDIRS),$(MAKECMDGOALS))
 
-clean install uninstall: subdirs
+install: subdirs
+	@[ -d $(DESTDIR)/${pkgconfigdir} ] || (mkdir -p $(DESTDIR)/${pkgconfigdir}; chmod 755 $(DESTDIR)/${pkgconfigdir})
+	cp $(INST_PKGCONFIG) $(DESTDIR)/${pkgconfigdir}/
+
+clean: subdirs
+
+uninstall: subdirs
+	rm -f $(addprefix $(DESTDIR)${pkgconfigdir}/, $(INST_PKGCONFIG))
 
 distclean: subdirs
-	rm -rf config.status config.log Makefile
+	rm -rf config.status config.log Makefile config.h libipfix.pc
 
 # build binary package
 # to build signed package remove -us -uc

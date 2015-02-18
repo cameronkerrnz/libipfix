@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libipfix
+Description: A C-Library for the IPFIX protocol
+URL: http://www.ip-measurement.org/libipfix
+Version: @PACKAGE_VERSION@
+Requires:
+Libs: -L${libdir} -lipfix @LDFLAGS@ @LIBS@
+Cflags: -I${includedir}

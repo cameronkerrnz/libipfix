@@ -232,5 +232,6 @@ AC_CONFIG_FILES([Makefile \
            libmisc/Makefile \
            probe/Makefile \
            examples/Makefile \
-           collector/Makefile ])
+           collector/Makefile \
+           libipfix.pc ])
 AC_OUTPUT
