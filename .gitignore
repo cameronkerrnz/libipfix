@@ -16,3 +16,6 @@ cscope.*
 10.*.*.*
 .depend
 config.log
+libipfix.pc
+netscaler_ipfix.pw
+data.json
