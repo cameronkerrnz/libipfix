@@ -191,6 +191,14 @@ void sig_func( int signo )
     exit_func( 1 );
 }
 
+void sig_hup( int signo )
+{
+    if ( verbose_level )
+        fprintf( stderr, "\n[%s] got SIGHUP, reopening JSON file if opened\n", par.progname );
+
+    ipfix_col_reload();
+}
+
 int do_collect()
 {
     int      i, retval = -1;
@@ -552,6 +560,8 @@ int main (int argc, char *argv[])
     signal( SIGKILL, sig_func );
     signal( SIGTERM, sig_func );
     signal( SIGINT,  sig_func );
+
+    signal( SIGHUP,  sig_hup );
 
     /** do the work
      */

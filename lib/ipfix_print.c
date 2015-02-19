@@ -38,7 +38,6 @@ static const char cvsid[]="$Id: ipfix_print.c 996 2009-03-19 18:14:44Z csc $";
 
 /*----- globals ----------------------------------------------------------*/
 
-static ipfix_col_info_t *g_colinfo =NULL;
 static char             tmpbuf[1000];
 
 static void outf( FILE *fp,

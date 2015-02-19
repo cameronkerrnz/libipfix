@@ -48,12 +48,11 @@ typedef struct ipfix_export_data_db
 {
     MYSQL *mysql;
     char *json_filename;
+    FILE *json_file;
 } ipfixe_data_db_t;
 #endif
 
 /*------ globals ---------------------------------------------------------*/
-
-static ipfix_col_info_t *g_colinfo =NULL;
 
 /*----- revision id ------------------------------------------------------*/
 
@@ -160,7 +159,6 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
     ipfixe_data_db_t *data = (ipfixe_data_db_t*)arg;
     char             *func = "export_drecord_jsonfile";
     int              i;
-    FILE *json_file = NULL;
 
     if ( !data->json_filename ) {
         return -1;
@@ -170,16 +168,18 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
      */
 
     if (strcmp(data->json_filename, "-") == 0) {
-        json_file = stdout;
+        data->json_file = stdout;
     } else {
-        json_file = fopen(data->json_filename, "a");
-        if (json_file == NULL) {
-            mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
-                   func, data->json_filename, strerror(errno));
-        } 
+        if ( data->json_filename && data->json_file == NULL ) {
+            data->json_file = fopen(data->json_filename, "a");
+            if (data->json_file == NULL) {
+                mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
+                       func, data->json_filename, strerror(errno));
+            }
+        }
     }
 
-    fprintf(json_file, "{\"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
+    fprintf(data->json_file, "{\"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
 
     /* TODO The first attribute should be the template number.
      */
@@ -193,50 +193,50 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
         /* The attribute names come from trusted data, not from the protocol
          */
 
-        fprintf(json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
+        fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
 
         switch (t->ipfixt->fields[i].elem->ft->coding) {
             case IPFIX_CODING_UINT:
                 switch (d->lens[i]) {
                     case 1:
-                        fprintf(json_file, "%u", *((uint8_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%u", *((uint8_t *) (d->addrs[i])) );
                         break;
                     case 2:
-                        fprintf(json_file, "%u", *((uint16_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%u", *((uint16_t *) (d->addrs[i])) );
                         break;
                     case 4:
-                        fprintf(json_file, "%u", *((uint32_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%u", *((uint32_t *) (d->addrs[i])) );
                         break;
                     case 8:
-                        fprintf(json_file, "%"PRIu64, *((uint64_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%"PRIu64, *((uint64_t *) (d->addrs[i])) );
                         break;
                     default:
                         mlogf(1, "[%s] JSON emmission of type UINT (%d bytes) is NOT IMPLEMENTED (%s).\n", func, d->lens[i], t->ipfixt->fields[i].elem->ft->name);
-                        fprintf(json_file, "null");
+                        fprintf(data->json_file, "null");
                 }
                 break;
             case IPFIX_CODING_INT:
                 switch (d->lens[i]) {
                     case 1:
-                        fprintf(json_file, "%d", *((int8_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%d", *((int8_t *) (d->addrs[i])) );
                         break;
                     case 2:
-                        fprintf(json_file, "%d", *((int16_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%d", *((int16_t *) (d->addrs[i])) );
                         break;
                     case 4:
-                        fprintf(json_file, "%d", *((int32_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%d", *((int32_t *) (d->addrs[i])) );
                         break;
                     case 8:
-                        fprintf(json_file, "%"PRId64, *((uint64_t *) (d->addrs[i])) );
+                        fprintf(data->json_file, "%"PRId64, *((uint64_t *) (d->addrs[i])) );
                         break;
                     default:
                         mlogf(1, "[%s] JSON emmission of type INT (%d bytes) is NOT IMPLEMENTED (%s).\n", func, d->lens[i], t->ipfixt->fields[i].elem->ft->name);
-                        fprintf(json_file, "null");
+                        fprintf(data->json_file, "null");
                 }
                 break;
             case IPFIX_CODING_FLOAT:
                 mlogf(1, "[%s] JSON emmission of type FLOAT not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
-                fprintf(json_file, "null");
+                fprintf(data->json_file, "null");
                 break;
             case IPFIX_CODING_IPADDR:
                 {
@@ -244,36 +244,34 @@ int ipfix_export_drecord_jsonfile( ipfixs_node_t      *s,
 
                     ipfix_snprint_ipaddr(addrbuf, INET6_ADDRSTRLEN, d->addrs[i], d->lens[i]);
 
-                    fprintf(json_file, "\"%s\"", addrbuf);
+                    fprintf(data->json_file, "\"%s\"", addrbuf);
                 }
                 break;
             case IPFIX_CODING_NTP:
-                json_render_NTP_timestamp_to_FILE(json_file, d->addrs[i], d->lens[i]);
+                json_render_NTP_timestamp_to_FILE(data->json_file, d->addrs[i], d->lens[i]);
                 break;
             case IPFIX_CODING_STRING:
                 // don't forget JSON is meant to be UTF-8; IPFIX/Netscaler is ....?
-                json_render_string_to_FILE(json_file, (const char *) d->addrs[i], d->lens[i]);  
+                json_render_string_to_FILE(data->json_file, (const char *) d->addrs[i], d->lens[i]);  
                 break;
             case IPFIX_CODING_BYTES:
-                json_render_bytes_as_hexpairs_to_FILE(json_file, d->addrs[i], d->lens[i]);  
+                json_render_bytes_as_hexpairs_to_FILE(data->json_file, d->addrs[i], d->lens[i]);  
                 break;
             default:
                 mlogf(1, "[%s] JSON emmission of type %d not currently supported (%s).\n",
                       func, t->ipfixt->fields[i].elem->ft->coding, t->ipfixt->fields[i].elem->ft->name);
-                fprintf(json_file, "null");
+                fprintf(data->json_file, "null");
         }
     }
 
-    fprintf(json_file, "}\n");
+    fprintf(data->json_file, "}\n");
 
-    if (json_file == stdout) {
-        fflush(stdout); /* stdout is by default fully-buffered when not to a terminal */
-    }
-    else if (json_file != NULL) {
-        fclose(json_file);
+    if (data->json_file) {
+        fflush(data->json_file);
     }
     return 0;
 }
+
 int ipfix_export_drecord_db( ipfixs_node_t      *s,
                              ipfixt_node_t      *t,
                              ipfix_datarecord_t *d,
@@ -375,9 +373,21 @@ int ipfix_export_init_db( char *dbhost, char *dbuser,
     }
 
     data->json_filename = opt_jsonfile;
+    data->json_file = NULL;
 
     *arg = (void**)data;
     return 0;
+}
+
+void ipfix_col_db_reload( void )
+{
+    ipfixe_data_db_t *data = g_colinfo->data;
+
+    if (data->json_file != NULL && data->json_file != stdout) {
+        fclose(data->json_file);
+        data->json_file = NULL;
+        /* It will get reopened when it next receives data */
+    }
 }
 
 void ipfix_export_cleanup_db( void *arg )
@@ -385,11 +395,17 @@ void ipfix_export_cleanup_db( void *arg )
     ipfixe_data_db_t *data = (ipfixe_data_db_t*)arg;
 
     if ( data ) {
+        if ( data->json_file ) {
+            fclose(data->json_file);
+            /* possible that the above could fail, but not sure what we would do */
+            data->json_file = NULL;
+        }
         if ( data->mysql )
             ipfix_db_close( &(data->mysql) );
         free(data);
     }
 }
+
 #endif
 
 /*----- export funcs -----------------------------------------------------*/

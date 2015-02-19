@@ -39,8 +39,6 @@ typedef struct ipfix_export_data_file
 
 /*------ globals ---------------------------------------------------------*/
 
-static ipfix_col_info_t *g_colinfo =NULL;
-
 /*----- revision id ------------------------------------------------------*/
 
 static const char cvsid[]="$Id: ipfix_col_files.c 96 2009-03-27 19:19:27Z csc $";

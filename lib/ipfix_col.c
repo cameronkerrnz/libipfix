@@ -121,6 +121,8 @@ ipfixe_node_t  *g_exporter = NULL;                   /* list of exporters */
 ipfixs_node_t  *udp_sources = NULL;                  /* list of sources   */
 mptimer_t      g_mt;                                 /* timer */
 
+ipfix_col_info_t   *g_colinfo =NULL;
+
 #ifdef SCTPSUPPORT
 sctp_assoc_node_t *sctp_assocs = NULL;               /* sctp associations */
 #endif
@@ -2012,6 +2014,15 @@ int ipfix_get_template_ident( ipfix_template_t *t,
 
     return 0;
 }
+
+
+void ipfix_col_reload( void )
+{
+#ifdef DBSUPPORT
+    ipfix_col_db_reload();
+#endif
+}
+
 
 /*
  * name:        ipfix_col_cleanup()

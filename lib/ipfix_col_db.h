@@ -28,6 +28,7 @@ int  ipfix_export_init_db( char *dbhost, char *dbuser,
                            char *dbpw, char *dbname, 
                            char *opt_jsonfile,
                            void **data );
+void ipfix_col_db_reload( void );
 
 #ifdef __cplusplus
 }

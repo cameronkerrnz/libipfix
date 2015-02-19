@@ -243,6 +243,7 @@ extern int ipfix_snprint_ipaddr( char *str, size_t size, void *data, size_t len 
  */
 int  ipfix_init( void );
 int  ipfix_add_vendor_information_elements( ipfix_field_type_t *fields );
+int  ipfix_reload( void );
 void ipfix_cleanup( void );
 
 #ifdef __cplusplus

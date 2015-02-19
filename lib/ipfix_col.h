@@ -97,6 +97,8 @@ typedef struct ipfix_col_info
     void *data;
 } ipfix_col_info_t;
 
+extern ipfix_col_info_t   *g_colinfo;
+
 typedef struct ipfix_col_info_node
 {
     struct ipfix_col_info_node *next;
@@ -119,6 +121,7 @@ int  ipfix_col_start_msglog( FILE *fpout );
 void ipfix_col_stop_msglog( void ); 
 int  ipfix_col_close( int fd );
 void ipfix_col_cleanup( void );
+void ipfix_col_reload( void );
 
 /* internal, experimental */
 int  ipfix_parse_hdr( const uint8_t *buf, size_t buflen, ipfix_hdr_t *hdr );
@@ -134,6 +137,10 @@ int  ipfix_col_close_ssl( ipfix_col_t *handle );
 
 
 const char *ipfix_col_input_get_ident( ipfix_input_t *input );
+
+#ifdef DBSUPPORT
+# include <ipfix_col_db.h>
+#endif
 
 #ifdef __cplusplus
 }
