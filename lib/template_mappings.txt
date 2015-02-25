@@ -1,0 +1,14 @@
+#PEN|Template_ID|Template_name
+5951|271|ICA Session Setup
+5951|274|ICA App Launch
+5951|272|ICA Network Update
+5951|608|ICA Stream Update
+5951|273|ICA Session (Channel) Update
+5951|275|ICA App Terminate
+5951|604|WanOp Accelerate TCP
+5951|605|WanOp Un-accelerated TCP
+5951|606|UDPv4
+5951|256|TCPv4 Ingress
+5951|257|TCPv4 Egress
+5951|265|TCP appId and appName mapping
+ 
