@@ -19,6 +19,9 @@ $$LIC$$
 #ifdef DBSUPPORT
 #include <ipfix_db.h>
 #endif
+#ifdef JSONLINESSUPPORT
+# include <ipfix_jsonlines.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,6 +97,7 @@ typedef struct ipfix_col_info
                           ipfix_datarecord_t*,void*);
     int (*export_rawmsg)(ipfixs_node_t *source, const uint8_t* data, size_t len, void *arg);
     void (*export_cleanup)(void*);
+    void (*export_reload)(void*);
     void *data;
 } ipfix_col_info_t;
 
@@ -111,8 +115,11 @@ typedef void* ipfix_col_t;
 void ipfix_col_init( void );
 int  ipfix_col_init_fileexport( char *datadir );
 void ipfix_col_stop_fileexport( void );
-int  ipfix_col_init_mysqlexport( char *host, char *user, char *pw, char *name, char *opt_jsonfile );
+int  ipfix_col_init_mysqlexport( char *host, char *user, char *pw, char *name );
 void ipfix_col_stop_mysqlexport( void );
+int  ipfix_col_init_jsonlinesexport( char *jsonfile );
+void ipfix_col_stop_jsonlinesexport( void );
+void ipfix_col_reload_jsonlinesexport( void );
 int  ipfix_col_register_export( ipfix_col_info_t *colinfo );
 int  ipfix_col_cancel_export( ipfix_col_info_t *colinfo );
 int  ipfix_col_listen( int *nfds, int **fds, ipfix_proto_t protocol, 
@@ -140,6 +147,9 @@ const char *ipfix_col_input_get_ident( ipfix_input_t *input );
 
 #ifdef DBSUPPORT
 # include <ipfix_col_db.h>
+#endif
+#ifdef JSONLINESSUPPORT
+# include <ipfix_col_jsonlines.h>
 #endif
 
 #ifdef __cplusplus

@@ -39,6 +39,9 @@ $$LIC$$
 #ifdef DBSUPPORT
 #include "ipfix_db.h"
 #endif
+#ifdef JSONLINESSUPPORT
+# include "ipfix_jsonlines.h"
+#endif
 #include "ipfix_col.h"
 #include "ipfix_def_fokus.h"
 #include "ipfix_fields_fokus.h"
@@ -71,6 +74,8 @@ typedef struct ipfix_collector_opts
     char           *dbpw_filename; /* db password from file */
     char           *dbname;      /* db name     */
     char           *dbhost;      /* hostname    */
+
+    int            jsonexport;   /* flag        */
     char           *jsonfile;    /* filename    */
 
     int            udp;          /* support udp clients  */
@@ -114,6 +119,11 @@ static void usage( char *taskname)
         "  -t                          support TCP clients\n"
         "  -u                          support UDP clients\n"
         "  -v                          increase verbose level\n"
+#ifdef JSONLINESSUPPORT
+        "jsonlines options:\n"
+        "  --json                      export JSON to a file; one JSON doc/line\n"
+        "  --jsonfile <filename>       file to append to, or '-' for stdout\n"
+#endif
 #ifdef DBSUPPORT
 #ifdef HAVE_GETOPT_LONG
         "db options:\n"
@@ -123,7 +133,6 @@ static void usage( char *taskname)
         "  --dbuser <user>             db user\n"
         "  --dbpw   <password>         db password\n"
         "  --dbpw-filename <filename>  db password from first line of file\n"
-        "  --jsonfile <filename>       templates to db; data as JSON lines\n"
 #else
         "  -d                          export into database\n"
 #endif
@@ -176,6 +185,9 @@ void exit_func ( int retval )
 #ifdef DBSUPPORT
     if ( par.dbexport ) ipfix_col_stop_mysqlexport();
 #endif
+#ifdef JSONLINESSUPPORT
+    if ( par.jsonexport ) ipfix_col_stop_jsonlinesexport();
+#endif
     (void) ipfix_col_stop_msglog();
     ipfix_col_cleanup();
     ipfix_cleanup();
@@ -194,9 +206,11 @@ void sig_func( int signo )
 void sig_hup( int signo )
 {
     if ( verbose_level )
-        fprintf( stderr, "\n[%s] got SIGHUP, reopening JSON file if opened\n", par.progname );
+        fprintf( stderr, "\n[%s] got SIGHUP, giving collectors a chance to react\n", par.progname );
 
-    ipfix_col_reload();
+#ifdef JSONLINESSUPPORT
+    ipfix_col_reload_jsonlinesexport();
+#endif
 }
 
 int do_collect()
@@ -219,8 +233,16 @@ int do_collect()
 #ifdef DBSUPPORT
     if ( par.dbexport ) {
         if ( ipfix_col_init_mysqlexport( par.dbhost, par.dbuser,
-                                         par.dbpw, par.dbname, par.jsonfile ) <0 ) {
+                                         par.dbpw, par.dbname ) <0 ) {
             mlogf( 0, "[%s] cannot connect to database\n", par.progname );
+            return -1;
+        }
+    }
+#endif
+#ifdef JSONLINESSUPPORT
+    if ( par.jsonexport ) {
+        if ( ipfix_col_init_jsonlinesexport( par.jsonfile ) < 0 ) {
+            mlogf( 0, "[%s] cannot use jsonlines (WHY?)\n", par.progname );
             return -1;
         }
     }
@@ -338,19 +360,20 @@ int main (int argc, char *argv[])
     char          opt[] = "64stuhl:p:vo:";
 #ifdef HAVE_GETOPT_LONG
     struct option lopt[] = { 
+        { "db", 0, 0, 0},
         { "dbhost", 1, 0, 0},
         { "dbname", 1, 0, 0},
         { "dbuser", 1, 0, 0},
         { "dbpw", 1, 0, 0},
-        { "db", 0, 0, 0},
+        { "dbpw-filename", 1, 0, 0},
         { "ssl", 0, 0, 0},
         { "key", 1, 0, 0},
         { "cert", 1, 0, 0},
         { "cafile", 1, 0, 0},
         { "cadir", 1, 0, 0},
         { "help", 0, 0, 0},
+        { "json", 0, 0, 0},
         { "jsonfile", 1, 0, 0},
-        { "dbpw-filename", 1, 0, 0},
         { 0, 0, 0, 0 } 
     };
 #endif
@@ -376,7 +399,8 @@ int main (int argc, char *argv[])
     par.dbuser         =  DFLT_MYSQL_USER;
     par.dbpw           =  DFLT_MYSQL_PASSWORD;
     par.dbpw_filename  =  NULL;
-    par.jsonfile       =  NULL;
+    par.jsonexport     =  0;
+    par.jsonfile       =  "-";
 
     snprintf( par.progname, sizeof(par.progname), "%s", basename( argv[0]) );
 
@@ -392,44 +416,47 @@ int main (int argc, char *argv[])
         {
           case 0: 
               switch (loptidx) {
-                case 0: /* dbhost */
-                    par.dbhost = optarg;
-                    break;
-                case 1: /* dbname */
-                    par.dbname = optarg;
-                    break;
-                case 2: /* dbuser */
-                    par.dbuser = optarg;
-                    break;
-                case 3: /* dbpw */
-                    par.dbpw = optarg;
-                    break;
-                case 4: /* db */
+                case 0: /* db */
                     par.dbexport = 1;
                     break;
-                case 5: /* ssl */
+                case 1: /* dbhost */
+                    par.dbhost = optarg;
+                    break;
+                case 2: /* dbname */
+                    par.dbname = optarg;
+                    break;
+                case 3: /* dbuser */
+                    par.dbuser = optarg;
+                    break;
+                case 4: /* dbpw */
+                    par.dbpw = optarg;
+                    break;
+                case 5: /* dbpw-filename */
+                    par.dbpw_filename = optarg;
+                    break;
+                case 6: /* ssl */
                     par.ssl = 1;
                     break;
-                case 6: /* key */
+                case 7: /* key */
                     par.keyfile = optarg;
                     break;
-                case 7: /* cert */
+                case 8: /* cert */
                     par.certfile = optarg;
                     break;
-                case 8: /* cafile */
+                case 9: /* cafile */
                     par.cafile = optarg;
                     break;
-                case 9: /* cadir */
+                case 10: /* cadir */
                     par.cadir = optarg;
                     break;
-                case 10: /* help */
+                case 11: /* help */
                     usage(par.progname);
                     exit(1);
-                case 11: /* jsonfile */
-                    par.jsonfile = optarg;
+                case 12: /* json */
+                    par.jsonexport = 1;
                     break;
-                case 12: /* dbpw-filename */
-                    par.dbpw_filename = optarg;
+                case 13: /* jsonfile */
+                    par.jsonfile = optarg;
                     break;
               }
               break;
@@ -495,7 +522,7 @@ int main (int argc, char *argv[])
     if ( !par.udp && !par.tcp && !par.sctp )
         par.tcp++;
 
-    if ( !par.dbexport && !par.datadir ) {
+    if ( !par.dbexport && !par.datadir && !par.jsonexport ) {
         fprintf( stderr, "info: message dump, no data storage.\n" );
         fflush( stderr );
     }
@@ -529,8 +556,8 @@ int main (int argc, char *argv[])
            par.progname, par.port,
            par.dbexport?"database":par.datadir?"files":"stdout" );
 
-    if ( par.dbexport && par.jsonfile ) {
-        mlogf(1, "[%s] templates go to database, data goes to file %s as one JSON document per line\n",
+    if ( par.jsonexport ) {
+        mlogf(1, "[%s] data goes to file %s as one JSON document per line\n",
               par.progname, par.jsonfile);
     }
 

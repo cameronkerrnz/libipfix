@@ -19,3 +19,4 @@ config.log
 libipfix.pc
 netscaler_ipfix.pw
 data.json
+autom4te.cache

@@ -32,6 +32,7 @@ $$LIC$$
 #include "ipfix_def_fokus.h"
 #include "ipfix_fields_fokus.h"
 #include "misc.h"
+#include "mlog.h"
 
 /*------ defines ---------------------------------------------------------*/
 
@@ -152,10 +153,10 @@ int main (int argc, char *argv[])
         exit(1);
     }
 
-    /** activate database export (jsonfile is not used)
+    /** activate database export
      */
     if ( ipfix_col_init_mysqlexport( dbhost, dbuser,
-                                     dbpw, dbname, NULL ) <0 ) {
+                                     dbpw, dbname ) <0 ) {
         fprintf( stderr, "cannot connect to database\n" );
         ipfix_cleanup();
         exit(1);

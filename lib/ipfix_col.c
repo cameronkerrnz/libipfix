@@ -49,6 +49,9 @@ $$LIC$$
 #ifdef DBSUPPORT
 #include "ipfix_db.h"
 #endif
+#ifdef JSONLINESSUPPORT
+# include "ipfix_jsonlines.h"
+#endif
 #include "ipfix_col.h"
 
 /*----- defines ----------------------------------------------------------*/
@@ -2013,14 +2016,6 @@ int ipfix_get_template_ident( ipfix_template_t *t,
     }
 
     return 0;
-}
-
-
-void ipfix_col_reload( void )
-{
-#ifdef DBSUPPORT
-    ipfix_col_db_reload();
-#endif
 }
 
 

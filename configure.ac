@@ -64,6 +64,22 @@ AS_HELP_STRING([--disable-sctp],[disable sctp support])],
 AC_SUBST(SCTPLIBS)
 
 #
+# JSONLINES support
+#################################################
+AC_ARG_ENABLE(jsonlines,
+[
+AS_HELP_STRING([--enable-jsonlines],[enable jsonlines support])
+AS_HELP_STRING([--disable-jsonlines],[disable jsonlines support])],
+[
+   if test $enableval != "no" ; then
+      CPPFLAGS="-DJSONLINESSUPPORT $CPPFLAGS"
+      IPFIX_JSONLINES_OBJS="ipfix_jsonlines.o ipfix_col_jsonlines.o json_out.o"
+   fi
+],
+[])
+AC_SUBST(IPFIX_JSONLINES_OBJS)
+
+#
 # enable ssl support
 #################################################
 AC_MSG_CHECKING(enable tls/dtls support)
@@ -155,7 +171,7 @@ AC_ARG_WITH(mysql,
          AC_MSG_WARN([cannot find mysql library])
       ])
    fi
-] )
+])
 AC_SUBST(MYSQLLIBS)
 AC_SUBST(IPFIX_DB_OBJ)
 AC_SUBST(IPFIX_DB_EXAMPLES)
@@ -188,7 +204,7 @@ AC_ARG_WITH(pcap,
    LDFLAGS="$LDFLAGS -L$withval/lib"
    CPPFLAGS="$CPPFLAGS -I$withval/include"
 ],
-[] )
+[])
 SAVELIBS=$LIBS
 LIBS=
 AC_CHECK_LIB([$PCAP], [pcap_open_live],,
