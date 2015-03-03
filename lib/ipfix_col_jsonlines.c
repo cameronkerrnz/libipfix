@@ -48,6 +48,31 @@ typedef struct ipfix_export_data_jsonlines
 
 /*----- static funcs -----------------------------------------------------*/
 
+int _jsonlines_ensure_open(const char *func, ipfixe_data_jsonlines_t *data)
+{
+    if (strcmp(data->json_filename, "-") == 0) {
+        data->json_file = stdout;
+    } else {
+        if ( data->json_filename && data->json_file == NULL ) {
+            data->json_file = fopen(data->json_filename, "a");
+            if (data->json_file == NULL) {
+                mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
+                       func, data->json_filename, strerror(errno));
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
+static void _jsonlines_after_message(ipfixe_data_jsonlines_t *data)
+{
+    if (data->json_file) {
+        /* TODO: Need to be able to have a more performant flushing policy */
+        fflush(data->json_file);
+    }
+}
+
 int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
                                    ipfixt_node_t      *t,
                                    ipfix_datarecord_t *d,
@@ -67,16 +92,9 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
     /* Write data set to a file as JSON. One JSON document per line.
      */
 
-    if (strcmp(data->json_filename, "-") == 0) {
-        data->json_file = stdout;
-    } else {
-        if ( data->json_filename && data->json_file == NULL ) {
-            data->json_file = fopen(data->json_filename, "a");
-            if (data->json_file == NULL) {
-                mlogf( 0, "[%s] opening file '%s' for appending failed: %s\n",
-                       func, data->json_filename, strerror(errno));
-            }
-        }
+    if (_jsonlines_ensure_open(func, data) < 0)
+    {
+        return -1;
     }
 
     if (source != NULL && source->type == IPFIX_INPUT_IPCON
@@ -185,10 +203,69 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
 
     fprintf(data->json_file, "}\n");
 
-    if (data->json_file) {
-        /* TODO: Need to be able to have a more performant flushing policy */
-        fflush(data->json_file);
+    _jsonlines_after_message(data);
+#endif
+    return 0;
+}
+
+int ipfix_export_newsource_jsonlines( ipfixs_node_t *s, void *arg )
+{
+#ifdef JSONLINESSUPPORT
+    ipfixe_data_jsonlines_t *data = (ipfixe_data_jsonlines_t*)arg;
+
+    if (_jsonlines_ensure_open(__FUNCTION__, data) < 0)
+    {
+        return -1;
     }
+
+    /* "ipfix_collector_notify":"newsource"  */
+
+    fprintf(data->json_file, 
+            "{ \"ipfix_collector_notice\":\"newsource\""
+            ", \"summary\":\"new source seen %s/%lu\""
+            ", \"ipfix_exporter_ip\":\"%s\""
+            ", \"observationDomainId\":%lu"
+            "}\n",
+            ipfix_col_input_get_ident( s->input ), (u_long)s->odid,
+            ipfix_col_input_get_ident( s->input ), (u_long)s->odid );
+
+    _jsonlines_after_message(data);
+
+#endif
+    return 0;
+}
+
+int ipfix_export_notify_no_template_for_set(
+    int template_id,
+    ipfixs_node_t * source,
+    const uint8_t * set_start,
+    size_t set_len,
+    void * arg)
+{
+#ifdef JSONLINESSUPPORT
+    ipfixe_data_jsonlines_t *data = (ipfixe_data_jsonlines_t*)arg;
+
+    if (_jsonlines_ensure_open(__FUNCTION__, data) < 0)
+    {
+        return -1;
+    }
+    
+    fprintf(data->json_file, 
+            "{ \"ipfix_collector_notice\":\"no_template_for_set\""
+            ", \"ipfix_template_id\":\"%d\""
+            ", \"ipfix_exporter_ip\":\"%s\""
+            ", \"summary\":\"no template for %d, skip data set\""
+            ", \"set_bytes\":\"",
+            template_id,
+            ipfix_col_input_get_ident( source->input ),
+            template_id);
+            
+    json_render_bytes_as_hexpairs_to_FILE(data->json_file, set_start, set_len);
+
+    fprintf(data->json_file,
+            "\"}\n");
+
+    _jsonlines_after_message(data);
 #endif
     return 0;
 }
@@ -255,9 +332,12 @@ int ipfix_col_init_jsonlinesexport( char *jsonfile )
         return -1;
     }
 
-    g_colinfo->export_drecord   = ipfix_export_drecord_jsonlines;
-    g_colinfo->export_cleanup   = ipfix_export_cleanup_jsonlines;
-    g_colinfo->export_reload    = ipfix_export_reload_jsonlines;
+    g_colinfo->export_drecord                       = ipfix_export_drecord_jsonlines;
+    g_colinfo->export_cleanup                       = ipfix_export_cleanup_jsonlines;
+    g_colinfo->export_reload                        = ipfix_export_reload_jsonlines;
+    g_colinfo->export_newsource                     = ipfix_export_newsource_jsonlines;
+    g_colinfo->export_notify_no_template_for_set    = ipfix_export_notify_no_template_for_set;
+
     g_colinfo->data = data;
 
     return ipfix_col_register_export( g_colinfo );

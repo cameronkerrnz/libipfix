@@ -1059,6 +1059,13 @@ int ipfix_parse_msg( ipfix_input_t *input,
             if ( (t=_get_ipfixt( s->templates, setid )) ==NULL ) {
                 mlogf( 0, "[%s] no template for %d, skip data set\n", 
                        func, setid );
+
+                for ( e=g_exporter; e!=NULL; e=e->next ) {
+                    if ( e->elem->export_notify_no_template_for_set )
+                        (void) e->elem->export_notify_no_template_for_set(
+                                setid, s, buf+nread, setlen, e->elem->data );
+                }
+
                 nread += setlen;
                 err_flag = 1;
             } 

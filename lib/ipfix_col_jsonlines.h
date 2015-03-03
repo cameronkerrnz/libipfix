@@ -18,6 +18,7 @@ int ipfix_export_drecord_jsonlines(
     void *arg,                   /* <> jsonlines state */
     ipfix_input_t *source        /* <  Potential IP address information. May be NULL */      
     );
+int ipfix_export_newsrc_jsonlines( ipfixs_node_t *s, void *arg );
 
 void ipfix_export_reload_jsonlines(void *arg);
 void ipfix_export_cleanup_jsonlinesexport( void *arg );
