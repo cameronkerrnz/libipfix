@@ -142,10 +142,13 @@ static int export_trecord_file( ipfixs_node_t *s, ipfixt_node_t *t, void *arg )
 static int export_drecord_file( ipfixs_node_t      *s,
                                 ipfixt_node_t      *t,
                                 ipfix_datarecord_t *data,
-                                void               *arg )
+                                void               *arg,
+                                ipfix_template_t   *source )
 {
     char          tmpbuf[2000];
     int           i, nbytes;
+
+    (void) source;
 
     if ( s->fp ) {
         /** write record into file

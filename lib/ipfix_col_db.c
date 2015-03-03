@@ -151,11 +151,14 @@ int ipfix_export_trecord_db( ipfixs_node_t *s, ipfixt_node_t *t, void *arg )
 int ipfix_export_drecord_db( ipfixs_node_t      *s,
                              ipfixt_node_t      *t,
                              ipfix_datarecord_t *d,
-                             void               *arg )
+                             void               *arg,
+                             ipfix_input_t      *source )
 {
     ipfixe_data_db_t *data = (ipfixe_data_db_t*)arg;
     char             *func = "export_drecord_db";
     int              i, nbytes, binary_f=0;
+
+    (void) source;
 
     if ( !data->mysql )
         return -1;

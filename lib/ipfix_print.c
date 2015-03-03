@@ -126,11 +126,14 @@ static int ipfix_print_trecord( ipfixs_node_t *s, ipfixt_node_t *t, void *arg )
 static int ipfix_print_drecord( ipfixs_node_t      *s,
                                 ipfixt_node_t      *t,
                                 ipfix_datarecord_t *data,
-                                void               *arg )
+                                void               *arg,
+                                ipfix_input_t      *source )
 {
     char  tmpbuf[2000];
     int   i;
     FILE  *fp = (FILE*)arg;
+
+    (void) source;
 
     if ( !t || !s || !data )
         return -1;

@@ -51,12 +51,14 @@ typedef struct ipfix_export_data_jsonlines
 int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
                                    ipfixt_node_t      *t,
                                    ipfix_datarecord_t *d,
-                                   void               *arg )
+                                   void               *arg,
+                                   ipfix_input_t      *source )
 {
 #ifdef JSONLINESSUPPORT
     ipfixe_data_jsonlines_t *data = (ipfixe_data_jsonlines_t*)arg;
     char             *func = "export_drecord_jsonlines";
     int              i;
+    char             exporter_ip[INET6_ADDRSTRLEN];
 
     if ( !data->json_filename ) {
         return -1;
@@ -77,7 +79,26 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
         }
     }
 
-    fprintf(data->json_file, "{\"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
+    if (source != NULL && source->type == IPFIX_INPUT_IPCON
+            && source->u.ipcon.addr->sa_family == AF_INET)
+    {
+        inet_ntop( AF_INET, & ((struct sockaddr_in *)(source->u.ipcon.addr))->sin_addr.s_addr,
+            exporter_ip, INET6_ADDRSTRLEN);
+        fprintf(data->json_file, "{\"ipfix_exporter_ip\":\"%s\"", exporter_ip);
+    }
+    else if (source != NULL && source->type == IPFIX_INPUT_IPCON
+            && source->u.ipcon.addr->sa_family == AF_INET6)
+    {
+        inet_ntop( AF_INET6, & ((struct sockaddr_in6 *)(source->u.ipcon.addr))->sin6_addr,
+            exporter_ip, INET6_ADDRSTRLEN);
+        fprintf(data->json_file, "{\"ipfix_exporter_ip\":\"%s\"", exporter_ip);
+    }
+    else
+    {
+        fprintf(data->json_file, "{\"ipfix_exporter_ip\":null");
+    }
+
+    fprintf(data->json_file, ", \"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
 
     /* TODO The first attribute should be the template number.
      */

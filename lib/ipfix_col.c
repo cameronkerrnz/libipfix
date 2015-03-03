@@ -821,7 +821,8 @@ int ipfix_export_trecord( ipfixs_node_t *s,
  */
 int ipfix_export_datarecord( ipfixs_node_t      *s,
                              ipfixt_node_t      *t,
-                             ipfix_datarecord_t *data )
+                             ipfix_datarecord_t *data,
+                             ipfix_input_t      *source )
 {
     ipfixe_node_t *e;
 
@@ -829,7 +830,7 @@ int ipfix_export_datarecord( ipfixs_node_t      *s,
      */
     for ( e=g_exporter; e!=NULL; e=e->next ) {
         if ( e->elem->export_drecord )
-            (void) e->elem->export_drecord( s, t, data, e->elem->data );
+            (void) e->elem->export_drecord( s, t, data, e->elem->data, source);
     }
 
     return 0;
@@ -1078,7 +1079,7 @@ int ipfix_parse_msg( ipfix_input_t *input,
                         goto errend;
                     }
 
-                    (void) ipfix_export_datarecord( s, t, &data );
+                    (void) ipfix_export_datarecord( s, t, &data, input );
 
                     bytesleft -= bytes;
                     offset    += bytes;
@@ -1245,7 +1246,7 @@ int ipfix_parse_raw_msg(ipfixs_node_t *src, ipfixe_node_t  *local_exporter, cons
 
                     for ( e=local_exporter; e!=NULL; e=e->next ) {
                         if ( e->elem->export_drecord )
-                            (void) e->elem->export_drecord( src, t, &data, e->elem->data );
+                            (void) e->elem->export_drecord( src, t, &data, e->elem->data, NULL );
                     }
 
                     //(void) ipfix_export_datarecord( src, t, &data );

@@ -15,7 +15,8 @@ int ipfix_export_drecord_jsonlines(
     ipfixs_node_t *s,            /* <  Parsed message */
     ipfixt_node_t *t,            /* <  Relevant template information for this data record */
     ipfix_datarecord_t *d,       /* <  Data record to be emitted */
-    void *arg                    /* <> jsonlines state */
+    void *arg,                   /* <> jsonlines state */
+    ipfix_input_t *source        /* <  Potential IP address information. May be NULL */      
     );
 
 void ipfix_export_reload_jsonlines(void *arg);
