@@ -255,7 +255,7 @@ int ipfix_export_notify_no_template_for_set(
             ", \"ipfix_template_id\":\"%d\""
             ", \"ipfix_exporter_ip\":\"%s\""
             ", \"summary\":\"no template for %d, skip data set\""
-            ", \"set_bytes\":\"",
+            ", \"set_bytes\":",
             template_id,
             ipfix_col_input_get_ident( source->input ),
             template_id);
@@ -263,7 +263,7 @@ int ipfix_export_notify_no_template_for_set(
     json_render_bytes_as_hexpairs_to_FILE(data->json_file, set_start, set_len);
 
     fprintf(data->json_file,
-            "\"}\n");
+            "}\n");
 
     _jsonlines_after_message(data);
 #endif
