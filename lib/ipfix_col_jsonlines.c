@@ -251,7 +251,7 @@ int ipfix_export_newsource_jsonlines( ipfixs_node_t *s, void *arg )
     return 0;
 }
 
-int ipfix_export_notify_no_template_for_set(
+int ipfix_export_notify_no_template_for_set_jsonlines(
     int template_id,
     ipfixs_node_t * source,
     const uint8_t * set_start,
@@ -348,11 +348,11 @@ int ipfix_col_init_jsonlinesexport( char *jsonfile )
         return -1;
     }
 
-    g_colinfo->export_drecord                       = ipfix_export_drecord_jsonlines;
-    g_colinfo->export_cleanup                       = ipfix_export_cleanup_jsonlines;
-    g_colinfo->export_reload                        = ipfix_export_reload_jsonlines;
-    g_colinfo->export_newsource                     = ipfix_export_newsource_jsonlines;
-    g_colinfo->export_notify_no_template_for_set    = ipfix_export_notify_no_template_for_set;
+    g_colinfo->export_drecord                    = ipfix_export_drecord_jsonlines;
+    g_colinfo->export_cleanup                    = ipfix_export_cleanup_jsonlines;
+    g_colinfo->export_reload                     = ipfix_export_reload_jsonlines;
+    g_colinfo->export_newsource                  = ipfix_export_newsource_jsonlines;
+    g_colinfo->export_notify_no_template_for_set = ipfix_export_notify_no_template_for_set_jsonlines;
 
     g_colinfo->data = data;
 
