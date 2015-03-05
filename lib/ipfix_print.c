@@ -18,6 +18,7 @@ $$LIC$$
 #include <errno.h>
 #include <signal.h>
 #include <limits.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -74,26 +75,30 @@ static int ipfix_print_newmsg( ipfixs_node_t *s, ipfix_hdr_t *hdr, void *arg )
 {
     char           timebuf[51];
     FILE           *fp = (FILE*)arg;
+    struct tm timeval_tm;
+    time_t message_time; /* don't cast from uint32_t to variable size time_t */
 
     /* print header
      */
     outf( fp, "IPFIX-HDR:\n version=%u,", hdr->version );
     if ( hdr->version == IPFIX_VERSION_NF9 ) {
         outf( fp, " records=%u\n", hdr->u.nf9.count );
+        message_time = hdr->u.nf9.unixtime;
         strftime( timebuf, 40, "%Y-%m-%d %T %Z", 
-                  localtime( (const time_t *) &(hdr->u.nf9.unixtime) ));
-        outf( fp, " sysuptime=%.3fs, unixtime=%lu (%s)\n", 
+                  localtime_r( &message_time, &timeval_tm ));
+        outf( fp, " sysuptime=%.3fs, unixtime=%"PRIu32" (%s)\n", 
               (double)(hdr->u.nf9.sysuptime)/1000.0, 
-              (u_long)hdr->u.nf9.unixtime, timebuf );
+              hdr->u.nf9.unixtime, timebuf );
         outf( fp, " seqno=%lu,", (u_long)hdr->seqno );
         outf( fp, " sourceid=%lu\n", (u_long)hdr->sourceid );
     }
     else {
         outf( fp, " length=%u\n", hdr->u.ipfix.length );
+        message_time = hdr->u.ipfix.exporttime;
         strftime( timebuf, 40, "%Y-%m-%d %T %Z", 
-                  localtime( (const time_t *) &(hdr->u.ipfix.exporttime) ));
-        outf( fp, " unixtime=%lu (%s)\n", 
-              (u_long)hdr->u.ipfix.exporttime, timebuf );
+                  localtime_r( &message_time, &timeval_tm ));
+        outf( fp, " unixtime=%"PRIu32" (%s)\n", 
+              hdr->u.ipfix.exporttime, timebuf );
         outf( fp, " seqno=%lu,", (u_long)hdr->seqno );
         outf( fp, " odid=%lu\n", (u_long)hdr->sourceid );
     }
