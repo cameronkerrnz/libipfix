@@ -77,6 +77,7 @@ typedef struct ipfix_collector_opts
 
     int            jsonexport;   /* flag        */
     char           *jsonfile;    /* filename    */
+    int            json_record_unknown_sets; /* boolean */
 
     int            udp;          /* support udp clients  */
     int            tcp;          /* support tcp packets  */
@@ -123,6 +124,7 @@ static void usage( char *taskname)
         "jsonlines options:\n"
         "  --json                      export JSON to a file; one JSON doc/line\n"
         "  --jsonfile <filename>       file to append to, or '-' for stdout\n"
+        "  --json-record-unknown-sets         include bytes of sets dropped due to no template\n"
 #endif
 #ifdef DBSUPPORT
 #ifdef HAVE_GETOPT_LONG
@@ -241,7 +243,8 @@ int do_collect()
 #endif
 #ifdef JSONLINESSUPPORT
     if ( par.jsonexport ) {
-        if ( ipfix_col_init_jsonlinesexport( par.jsonfile ) < 0 ) {
+        if ( ipfix_col_init_jsonlinesexport( par.jsonfile,
+                                             par.json_record_unknown_sets ) < 0 ) {
             mlogf( 0, "[%s] cannot use jsonlines (WHY?)\n", par.progname );
             return -1;
         }
@@ -374,6 +377,7 @@ int main (int argc, char *argv[])
         { "help", 0, 0, 0},
         { "json", 0, 0, 0},
         { "jsonfile", 1, 0, 0},
+        { "json-record-unknown-sets", 0, 0, 0},
         { 0, 0, 0, 0 } 
     };
 #endif
@@ -401,6 +405,7 @@ int main (int argc, char *argv[])
     par.dbpw_filename  =  NULL;
     par.jsonexport     =  0;
     par.jsonfile       =  "-";
+    par.json_record_unknown_sets = 0;
 
     snprintf( par.progname, sizeof(par.progname), "%s", basename( argv[0]) );
 
@@ -457,6 +462,9 @@ int main (int argc, char *argv[])
                     break;
                 case 13: /* jsonfile */
                     par.jsonfile = optarg;
+                    break;
+                case 14: /* json-record-unknown-sets */
+                    par.json_record_unknown_sets = 1;
                     break;
               }
               break;

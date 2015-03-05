@@ -43,6 +43,7 @@ typedef struct ipfix_export_data_jsonlines
     char *json_filename;
     FILE *json_file;
     char message_timestamp_str[JSON_MESSAGE_TIMESTAMP_SIZE];
+    int json_record_unknown_sets;
 } ipfixe_data_jsonlines_t;
 
 /*------ globals ---------------------------------------------------------*/
@@ -281,14 +282,17 @@ int ipfix_export_notify_no_template_for_set_jsonlines(
             ", \"ipfix_collector_notice\":\"no_template_for_set\""
             ", \"ipfix_template_id\":\"%d\""
             ", \"ipfix_exporter_ip\":\"%s\""
-            ", \"summary\":\"no template for %d, skip data set\""
-            ", \"set_bytes\":",
+            ", \"summary\":\"no template for %d, skip data set\"",
             data->message_timestamp_str,
             template_id,
             ipfix_col_input_get_ident( source->input ),
             template_id);
             
-    json_render_bytes_as_hexpairs_to_FILE(data->json_file, set_start, set_len);
+    if (data->json_record_unknown_sets)
+    {
+        fprintf(data->json_file, ", \"set_bytes\":");
+        json_render_bytes_as_hexpairs_to_FILE(data->json_file, set_start, set_len);
+    }
 
     fprintf(data->json_file,
             "}\n");
@@ -332,7 +336,7 @@ int ipfix_export_newmsg_jsonlines(ipfixs_node_t * s, ipfix_hdr_t * hdr, void * a
     return 0;
 }
     
-int ipfix_export_init_jsonlines( char *jsonfile, void **arg )
+int ipfix_export_init_jsonlines( char *jsonfile, int json_record_unknown_sets, void **arg )
 {
 #ifdef JSONLINESSUPPORT
     ipfixe_data_jsonlines_t *data;
@@ -342,6 +346,7 @@ int ipfix_export_init_jsonlines( char *jsonfile, void **arg )
 
     data->json_filename = jsonfile;
     data->json_file = NULL;
+    data->json_record_unknown_sets = json_record_unknown_sets;
 
     *arg = (void**)data;
 #endif
@@ -380,12 +385,14 @@ void ipfix_export_cleanup_jsonlines( void *arg )
 
 /*----- export funcs -----------------------------------------------------*/
 
-int ipfix_col_init_jsonlinesexport( char *jsonfile )
+int ipfix_col_init_jsonlinesexport(
+    char *jsonfile,
+    int json_record_unknown_sets)
 {
 #ifdef JSONLINESSUPPORT
     void *data;
 
-    if ( ipfix_export_init_jsonlines(jsonfile, &data) <0 ) {
+    if ( ipfix_export_init_jsonlines(jsonfile, json_record_unknown_sets, &data) <0 ) {
         return -1;
     }
 

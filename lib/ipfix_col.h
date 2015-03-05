@@ -118,7 +118,7 @@ int  ipfix_col_init_fileexport( char *datadir );
 void ipfix_col_stop_fileexport( void );
 int  ipfix_col_init_mysqlexport( char *host, char *user, char *pw, char *name );
 void ipfix_col_stop_mysqlexport( void );
-int  ipfix_col_init_jsonlinesexport( char *jsonfile );
+int  ipfix_col_init_jsonlinesexport( char *jsonfile, int json_record_unknown_sets );
 void ipfix_col_stop_jsonlinesexport( void );
 void ipfix_col_reload_jsonlinesexport( void );
 int  ipfix_col_register_export( ipfix_col_info_t *colinfo );
