@@ -143,7 +143,7 @@ static int export_drecord_file( ipfixs_node_t      *s,
                                 ipfixt_node_t      *t,
                                 ipfix_datarecord_t *data,
                                 void               *arg,
-                                ipfix_template_t   *source )
+                                ipfix_input_t      *source )
 {
     char          tmpbuf[2000];
     int           i, nbytes;
