@@ -122,18 +122,21 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
      */
 
     for ( i=0; i<t->ipfixt->nfields; i++ ) {
+
         if ( t->ipfixt->fields[i].elem->ft->eno == 0 
              && t->ipfixt->fields[i].elem->ft->ftype == 0xD2 ) {
              continue; /* D2 == 210, paddingOctets */
         }
 
-        /* The attribute names come from trusted data, not from the protocol
+        /*
+         * The attribute names come from trusted data, not from the protocol.
+         * We print out the header in each case, as we might wish to ignore the
+         * attribute based on the value (eg. a string "") 
          */
-
-        fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
 
         switch (t->ipfixt->fields[i].elem->ft->coding) {
             case IPFIX_CODING_UINT:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 switch (d->lens[i]) {
                     case 1:
                         fprintf(data->json_file, "%u", *((uint8_t *) (d->addrs[i])) );
@@ -153,6 +156,7 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
                 }
                 break;
             case IPFIX_CODING_INT:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 switch (d->lens[i]) {
                     case 1:
                         fprintf(data->json_file, "%d", *((int8_t *) (d->addrs[i])) );
@@ -172,10 +176,12 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
                 }
                 break;
             case IPFIX_CODING_FLOAT:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 mlogf(1, "[%s] JSON emmission of type FLOAT not complete yet (%s).\n", func, t->ipfixt->fields[i].elem->ft->name);
                 fprintf(data->json_file, "null");
                 break;
             case IPFIX_CODING_IPADDR:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 {
                     char addrbuf[INET6_ADDRSTRLEN];
 
@@ -185,16 +191,26 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
                 }
                 break;
             case IPFIX_CODING_NTP:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 json_render_NTP_timestamp_to_FILE(data->json_file, d->addrs[i], d->lens[i]);
                 break;
             case IPFIX_CODING_STRING:
-                // don't forget JSON is meant to be UTF-8; IPFIX/Netscaler is ....?
-                json_render_string_to_FILE(data->json_file, (const char *) d->addrs[i], d->lens[i]);  
+                if ((d->lens[i] > 0) && ((const char *)(d->addrs[i]))[0] != '\0')
+                {
+                    fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
+                    // don't forget JSON is meant to be UTF-8; IPFIX/Netscaler is ....?
+                    json_render_string_to_FILE(data->json_file, (const char *) d->addrs[i], d->lens[i]);  
+                }
                 break;
             case IPFIX_CODING_BYTES:
-                json_render_bytes_as_hexpairs_to_FILE(data->json_file, d->addrs[i], d->lens[i]);  
+                if (d->lens[i] > 0)
+                {
+                    fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
+                    json_render_bytes_as_hexpairs_to_FILE(data->json_file, d->addrs[i], d->lens[i]);  
+                }
                 break;
             default:
+                fprintf(data->json_file, ", \"%s\":", t->ipfixt->fields[i].elem->ft->name);
                 mlogf(1, "[%s] JSON emmission of type %d not currently supported (%s).\n",
                       func, t->ipfixt->fields[i].elem->ft->coding, t->ipfixt->fields[i].elem->ft->name);
                 fprintf(data->json_file, "null");
