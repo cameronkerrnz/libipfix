@@ -34,10 +34,15 @@ $$LIC$$
 
 /*------ structs ---------------------------------------------------------*/
 
+/* Constant size 1977-09-06T01:02:03.004Z */
+#define JSON_MESSAGE_TIMESTAMP_SIZE 25
+#define JSON_MESSAGE_TIMESTAMP_ATTRIBUTE_NAME "ipfix_timestamp"
+
 typedef struct ipfix_export_data_jsonlines
 {
     char *json_filename;
     FILE *json_file;
+    char message_timestamp_str[JSON_MESSAGE_TIMESTAMP_SIZE];
 } ipfixe_data_jsonlines_t;
 
 /*------ globals ---------------------------------------------------------*/
@@ -97,23 +102,26 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
         return -1;
     }
 
+    fprintf(data->json_file, "{\"" JSON_MESSAGE_TIMESTAMP_ATTRIBUTE_NAME "\":\"%s\"",
+        data->message_timestamp_str);
+
     if (source != NULL && source->type == IPFIX_INPUT_IPCON
             && source->u.ipcon.addr->sa_family == AF_INET)
     {
         inet_ntop( AF_INET, & ((struct sockaddr_in *)(source->u.ipcon.addr))->sin_addr.s_addr,
             exporter_ip, INET6_ADDRSTRLEN);
-        fprintf(data->json_file, "{\"ipfix_exporter_ip\":\"%s\"", exporter_ip);
+        fprintf(data->json_file, ", \"ipfix_exporter_ip\":\"%s\"", exporter_ip);
     }
     else if (source != NULL && source->type == IPFIX_INPUT_IPCON
             && source->u.ipcon.addr->sa_family == AF_INET6)
     {
         inet_ntop( AF_INET6, & ((struct sockaddr_in6 *)(source->u.ipcon.addr))->sin6_addr,
             exporter_ip, INET6_ADDRSTRLEN);
-        fprintf(data->json_file, "{\"ipfix_exporter_ip\":\"%s\"", exporter_ip);
+        fprintf(data->json_file, ", \"ipfix_exporter_ip\":\"%s\"", exporter_ip);
     }
     else
     {
-        fprintf(data->json_file, "{\"ipfix_exporter_ip\":null");
+        fprintf(data->json_file, ", \"ipfix_exporter_ip\":null");
     }
 
     fprintf(data->json_file, ", \"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
@@ -237,11 +245,13 @@ int ipfix_export_newsource_jsonlines( ipfixs_node_t *s, void *arg )
     /* "ipfix_collector_notify":"newsource"  */
 
     fprintf(data->json_file, 
-            "{ \"ipfix_collector_notice\":\"newsource\""
+            "{ \"" JSON_MESSAGE_TIMESTAMP_ATTRIBUTE_NAME "\":\"%s\""
+            ", \"ipfix_collector_notice\":\"newsource\""
             ", \"summary\":\"new source seen %s/%lu\""
             ", \"ipfix_exporter_ip\":\"%s\""
             ", \"observationDomainId\":%lu"
             "}\n",
+            data->message_timestamp_str,
             ipfix_col_input_get_ident( s->input ), (u_long)s->odid,
             ipfix_col_input_get_ident( s->input ), (u_long)s->odid );
 
@@ -267,11 +277,13 @@ int ipfix_export_notify_no_template_for_set_jsonlines(
     }
     
     fprintf(data->json_file, 
-            "{ \"ipfix_collector_notice\":\"no_template_for_set\""
+            "{ \"" JSON_MESSAGE_TIMESTAMP_ATTRIBUTE_NAME "\":\"%s\""
+            ", \"ipfix_collector_notice\":\"no_template_for_set\""
             ", \"ipfix_template_id\":\"%d\""
             ", \"ipfix_exporter_ip\":\"%s\""
             ", \"summary\":\"no template for %d, skip data set\""
             ", \"set_bytes\":",
+            data->message_timestamp_str,
             template_id,
             ipfix_col_input_get_ident( source->input ),
             template_id);
@@ -286,6 +298,40 @@ int ipfix_export_notify_no_template_for_set_jsonlines(
     return 0;
 }
 
+int ipfix_export_newmsg_jsonlines(ipfixs_node_t * s, ipfix_hdr_t * hdr, void * arg)
+{
+#ifdef JSONLINESSUPPORT
+    ipfixe_data_jsonlines_t *data = (ipfixe_data_jsonlines_t*)arg;
+
+    time_t         message_time;
+    struct timeval timestamp_tv;
+    struct tm      timestamp_tm;
+
+    (void) s;
+
+    if ( hdr->version == IPFIX_VERSION_NF9 )
+    {
+        message_time = hdr->u.nf9.unixtime;
+    }
+    else
+    {
+        message_time = hdr->u.ipfix.exporttime;
+    }
+
+    memset(&timestamp_tv, 0, sizeof(timestamp_tv));
+
+    timestamp_tv.tv_sec = message_time;
+    timestamp_tv.tv_usec = 0;
+
+    gmtime_r(&timestamp_tv.tv_sec, &timestamp_tm);
+
+    strftime(data->message_timestamp_str, JSON_MESSAGE_TIMESTAMP_SIZE,
+        "%Y-%m-%dT%H:%M:%SZ", &timestamp_tm);
+
+#endif
+    return 0;
+}
+    
 int ipfix_export_init_jsonlines( char *jsonfile, void **arg )
 {
 #ifdef JSONLINESSUPPORT
@@ -353,6 +399,7 @@ int ipfix_col_init_jsonlinesexport( char *jsonfile )
     g_colinfo->export_reload                     = ipfix_export_reload_jsonlines;
     g_colinfo->export_newsource                  = ipfix_export_newsource_jsonlines;
     g_colinfo->export_notify_no_template_for_set = ipfix_export_notify_no_template_for_set_jsonlines;
+    g_colinfo->export_newmsg                     = ipfix_export_newmsg_jsonlines;
 
     g_colinfo->data = data;
 
