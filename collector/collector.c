@@ -127,7 +127,7 @@ static void usage( char *taskname)
         "  --json-record-unknown-sets         include bytes of sets dropped due to no template\n"
 #endif
 #ifdef DBSUPPORT
-#ifdef HAVE_GETOPT_LONG
+# ifdef HAVE_GETOPT_LONG
         "db options:\n"
         "  --db                        export into database\n"
         "  --dbhost <hostname>         db host\n"
@@ -135,8 +135,9 @@ static void usage( char *taskname)
         "  --dbuser <user>             db user\n"
         "  --dbpw   <password>         db password\n"
         "  --dbpw-filename <filename>  db password from first line of file\n"
-#else
+# else
         "  -d                          export into database\n"
+# endif
 #endif
 #ifdef SSLSUPPORT
         "ssl options:\n"
@@ -145,7 +146,6 @@ static void usage( char *taskname)
         "  --cert   <file>             certificate file to use\n"
         "  --cafile <file>             file of CAs\n"
         "  --cadir  <dir>              directory of CAs\n"
-#endif
 #endif
         "\n";
 
