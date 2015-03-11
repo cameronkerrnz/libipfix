@@ -12,6 +12,7 @@ $$LIC$$
 #ifndef IPFIX_COL_H
 #define IPFIX_COL_H
 
+#include <stdio.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -33,6 +34,11 @@ extern "C" {
 #define DFLT_MYSQL_PASSWORD  "ipfix"
 
 #define MAXTEMPLIDENT        240
+
+typedef enum {
+    IPFIX_TEMPLATE_SOURCE_PROTOCOL = 1,
+    IPFIX_TEMPLATE_SOURCE_FALLBACK
+} ipfix_template_source_t;
 
 typedef enum {
     IPFIX_INPUT_FILE, IPFIX_INPUT_IPCON
@@ -63,6 +69,14 @@ typedef struct ipfixt_node
     unsigned             message_snr;      /* last ipfix message snr (hack) */
 #endif
 } ipfixt_node_t;
+
+#ifdef FALLBACK_TEMPLATES_SUPPORT
+typedef struct {
+    uint16_t template_id;
+    uint16_t field_count;
+    export_fields_t fields[50]; /* FIXME: can't have a flexible array nested inside another flexible array, so overestimate */
+} fallback_template_t;
+#endif
 
 typedef struct ipfixs_node
 {
@@ -97,6 +111,7 @@ typedef struct ipfix_col_info
                           ipfix_datarecord_t*,void*,ipfix_input_t*);
     int (*export_rawmsg)(ipfixs_node_t *source, const uint8_t* data, size_t len, void *arg);
     int (*export_notify_no_template_for_set)(int,ipfixs_node_t*,const uint8_t*,size_t,void*);
+    void (*export_template_source)(int template_id, ipfix_template_source_t source, void *arg);
     void (*export_cleanup)(void*);
     void (*export_reload)(void*);
     void *data;
@@ -145,6 +160,9 @@ int  ipfix_col_close_ssl( ipfix_col_t *handle );
 
 
 const char *ipfix_col_input_get_ident( ipfix_input_t *input );
+
+int ipfix_col_add_fallback_templates( const char *vendor_or_product_name );
+
 
 #ifdef DBSUPPORT
 # include <ipfix_col_db.h>

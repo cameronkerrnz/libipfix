@@ -53,6 +53,9 @@ $$LIC$$
 # include "ipfix_jsonlines.h"
 #endif
 #include "ipfix_col.h"
+#ifdef FALLBACK_TEMPLATES_SUPPORT
+# include "ipfix_fallback_templates_netscaler.h"
+#endif
 
 /*----- defines ----------------------------------------------------------*/
 
@@ -125,6 +128,8 @@ ipfixs_node_t  *udp_sources = NULL;                  /* list of sources   */
 mptimer_t      g_mt;                                 /* timer */
 
 ipfix_col_info_t   *g_colinfo =NULL;
+
+ipfixt_node_t *g_fallback_templates = NULL;
 
 #ifdef SCTPSUPPORT
 sctp_assoc_node_t *sctp_assocs = NULL;               /* sctp associations */
@@ -1056,20 +1061,34 @@ int ipfix_parse_msg( ipfix_input_t *input,
              */
             ipfixt_node_t *t;
 
-            if ( (t=_get_ipfixt( s->templates, setid )) ==NULL ) {
-                mlogf( 0, "[%s] no template for %d, skip data set\n", 
-                       func, setid );
+            /**
+             * if we can lookup a regular template as advised by protocol,
+             * or if we can apply a fallback template */
 
-                for ( e=g_exporter; e!=NULL; e=e->next ) {
-                    if ( e->elem->export_notify_no_template_for_set )
-                        (void) e->elem->export_notify_no_template_for_set(
-                                setid, s, buf+nread, setlen, e->elem->data );
+            t = _get_ipfixt(s->templates, setid);
+
+            if ( t != NULL )
+            {
+                for ( e = g_exporter; e != NULL; e = e->next ) {
+                    if ( e->elem->export_template_source )
+                        (void) e->elem->export_template_source( setid, IPFIX_TEMPLATE_SOURCE_PROTOCOL, e->elem->data );
                 }
+            }
+            else
+            {
+                t = _get_ipfixt(g_fallback_templates, setid);
 
-                nread += setlen;
-                err_flag = 1;
-            } 
-            else {
+                if ( t != NULL )
+                {
+                    for ( e = g_exporter; e != NULL; e = e->next ) {
+                        if ( e->elem->export_template_source )
+                            (void) e->elem->export_template_source( setid, IPFIX_TEMPLATE_SOURCE_FALLBACK, e->elem->data );
+                    }
+                }
+            }
+ 
+            if ( t != NULL )
+            {
                 for ( e=g_exporter; e!=NULL; e=e->next ) {
                     if ( e->elem->export_dset )
                         (void) e->elem->export_dset( t, buf+nread, setlen,
@@ -1097,6 +1116,22 @@ int ipfix_parse_msg( ipfix_input_t *input,
                            func, i+1, bytesleft );
                 }
                 nread += setlen;
+            } 
+
+            /** otherwise, we don't have a template and will likely drop the packet */
+            else
+            {
+                mlogf( 0, "[%s] no template for %d, skip data set\n", 
+                       func, setid );
+
+                for ( e=g_exporter; e!=NULL; e=e->next ) {
+                    if ( e->elem->export_notify_no_template_for_set )
+                        (void) e->elem->export_notify_no_template_for_set(
+                                setid, s, buf+nread, setlen, e->elem->data );
+                }
+
+                nread += setlen;
+                err_flag = 1;
             }
         }
         else {
@@ -2026,6 +2061,76 @@ int ipfix_get_template_ident( ipfix_template_t *t,
     return 0;
 }
 
+/*
+ * name:        ipfix_col_add_fallback_templates()
+ * parameters:  a name such as 'netscaler', which will be used to reference an internal
+ *              set of products that are known about. (currently just netscaler)
+ * return:      0 or -1 on failure.
+ * remarks:     
+ */
+
+int ipfix_col_add_fallback_templates( const char *vendor_or_product_name )
+{
+#ifdef FALLBACK_TEMPLATES_SUPPORT
+    ipfixt_node_t *new;
+    int t;
+    int f;
+
+    if (strcmp(vendor_or_product_name, "netscaler") == 0)
+    {
+        for (t = 0; t < netscaler_fallback_template_count; t++)
+        {
+            if ((new = calloc(1, sizeof(*new))) == NULL)
+                return -1;
+
+            new->expire_time = (time_t) (-1);
+            /** TODO what to do with ident */
+#ifdef DBSUPPORT
+# warning Expect bugs here as the database fields havent been set
+#endif
+
+            if ((new->ipfixt = calloc(1, sizeof(*(new->ipfixt)))) == NULL)
+                return -1;
+
+            new->ipfixt->type = DATA_TEMPLATE;
+            new->ipfixt->odid = 0;
+            new->ipfixt->tid = netscaler_fallback_templates[t].template_id;
+            new->ipfixt->ndatafields = netscaler_fallback_templates[t].field_count;
+            new->ipfixt->nscopefields = 0;
+            new->ipfixt->nfields = new->ipfixt->ndatafields + new->ipfixt->nscopefields;
+            new->ipfixt->maxfields = new->ipfixt->nfields;
+
+            new->ipfixt->fields = calloc(new->ipfixt->maxfields, sizeof(*(new->ipfixt->fields)));
+            if ( new->ipfixt->fields == NULL )
+                return -1;
+
+            for (f=0; f<netscaler_fallback_templates[t].field_count; f++)
+            {
+                new->ipfixt->fields[f].elem = ipfix_get_ftinfo(
+                    netscaler_fallback_templates[t].fields[f].eno,
+                    netscaler_fallback_templates[t].fields[f].ienum);
+                if (new->ipfixt->fields[f].elem == NULL)
+                {
+                    new->ipfixt->fields[f].elem = ipfix_create_unknown_ftinfo(
+                        netscaler_fallback_templates[t].fields[f].eno,
+                        netscaler_fallback_templates[t].fields[f].ienum);
+                    new->ipfixt->fields[f].unknown_f = 0; /* fixed fallback */
+                }
+                new->ipfixt->fields[f].flength = 
+                    netscaler_fallback_templates[t].fields[f].length;
+            }
+
+            new->next = g_fallback_templates;
+            g_fallback_templates = new;
+        }
+    }
+    else
+    {
+        return -1;
+    }
+#endif
+    return 0;
+}
 
 /*
  * name:        ipfix_col_cleanup()

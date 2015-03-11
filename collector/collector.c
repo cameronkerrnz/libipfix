@@ -59,6 +59,8 @@ $$LIC$$
 #define KEYFILE         "server.pem"
 #define CERTFILE        "server.pem"
 
+#define FALLBACK_TEMPLATES_MAX 3
+
 /*------ stuctures -------------------------------------------------------*/
 
 typedef struct ipfix_collector_opts
@@ -78,7 +80,8 @@ typedef struct ipfix_collector_opts
     int            jsonexport;   /* flag        */
     char           *jsonfile;    /* filename    */
     int            json_record_unknown_sets; /* boolean */
-
+    char           *fallback_templates[FALLBACK_TEMPLATES_MAX]; /* optional ordered array of "netscaler" (only, currently) */
+    int            fallback_templates_used;
     int            udp;          /* support udp clients  */
     int            tcp;          /* support tcp packets  */
     int            sctp;         /* support sctp clients */
@@ -146,6 +149,10 @@ static void usage( char *taskname)
         "  --cert   <file>             certificate file to use\n"
         "  --cafile <file>             file of CAs\n"
         "  --cadir  <dir>              directory of CAs\n"
+#endif
+#ifdef FALLBACK_TEMPLATES_SUPPORT
+        "fallback templates:\n"
+        "  --fallback-templates=netscaler\n"
 #endif
         "\n";
 
@@ -361,6 +368,7 @@ int main (int argc, char *argv[])
     char          arg;          /* short options: character */
     int           loptidx=0;    /* long options: arg==0 and index */
     char          opt[] = "64stuhl:p:vo:";
+    int           i;
 #ifdef HAVE_GETOPT_LONG
     struct option lopt[] = { 
         { "db", 0, 0, 0},
@@ -378,6 +386,7 @@ int main (int argc, char *argv[])
         { "json", 0, 0, 0},
         { "jsonfile", 1, 0, 0},
         { "json-record-unknown-sets", 0, 0, 0},
+        { "fallback-templates", 1, 0, 0},
         { 0, 0, 0, 0 } 
     };
 #endif
@@ -406,6 +415,7 @@ int main (int argc, char *argv[])
     par.jsonexport     =  0;
     par.jsonfile       =  "-";
     par.json_record_unknown_sets = 0;
+    par.fallback_templates_used = 0;
 
     snprintf( par.progname, sizeof(par.progname), "%s", basename( argv[0]) );
 
@@ -466,6 +476,11 @@ int main (int argc, char *argv[])
                 case 14: /* json-record-unknown-sets */
                     par.json_record_unknown_sets = 1;
                     break;
+                case 15: /* fallback-templates=<netscaler> */
+                    if (par.fallback_templates_used < FALLBACK_TEMPLATES_MAX - 1) {
+                        par.fallback_templates[par.fallback_templates_used] = optarg; /* TODO should get comma-split */
+                        par.fallback_templates_used++;
+                    }
               }
               break;
 
@@ -586,6 +601,14 @@ int main (int argc, char *argv[])
     if ( ipfix_add_vendor_information_elements( ipfix_reverse_ft_netscaler ) <0 ) {
         fprintf( stderr, "ipfix_add_vendor_information_elements() failed adding Netscaler reverse types: %s\n", strerror(errno) );
         exit(1);
+    }
+    for ( i=0; i < par.fallback_templates_used; i++ )
+    {
+        if ( ipfix_col_add_fallback_templates( par.fallback_templates[i] ) < 0 )
+        {
+            fprintf( stderr, "ipfix_col_add_fallback_templates() failed adding fallback templates for '%s'\n", par.fallback_templates[i] );
+            exit(1);
+        }
     }
 
 

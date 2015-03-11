@@ -646,7 +646,8 @@ IPFIX_DB_OBJ
 MYSQLLIBS
 IPFIX_SSL_OBJ
 SSLLIBS
-IPFIX_JSONLINES_OBJ
+IPFIX_JSONLINES_OBJS
+IPFIX_FALLBACK_TEMPLATES_OBJS
 SCTPLIBS
 OPENSSL
 INSTALL_DATA
@@ -713,6 +714,7 @@ ac_user_opts='
 enable_option_checking
 enable_ipv6
 enable_sctp
+enable_fallback_templates
 enable_jsonlines
 with_ssl
 with_mysql
@@ -1359,6 +1361,11 @@ Optional Features:
 
   --enable-sctp           enable sctp support
   --disable-sctp          disable sctp support
+
+  --enable-fallback-templates
+                          enable fallback-templates support
+  --disable-fallback-templates
+                          disable fallback-templates support
 
   --enable-jsonlines      enable jsonlines support
   --disable-jsonlines     disable jsonlines support
@@ -3103,6 +3110,21 @@ fi
 
 
 #
+# FALLBACK TEMPLATES support
+#################################################
+# Check whether --enable-fallback-templates was given.
+if test "${enable_fallback_templates+set}" = set; then
+  enableval=$enable_fallback_templates;
+   if test $enableval != "no" ; then
+      CPPFLAGS="-DFALLBACK_TEMPLATES_SUPPORT $CPPFLAGS"
+      IPFIX_FALLBACK_TEMPLATES_OBJS="$IPFIX_FALLBACK_TEMPLATES_OBSJ ipfix_fallback_templates_netscaler.o"
+   fi
+
+fi
+
+
+
+#
 # JSONLINES support
 #################################################
 # Check whether --enable-jsonlines was given.
@@ -3110,7 +3132,7 @@ if test "${enable_jsonlines+set}" = set; then
   enableval=$enable_jsonlines;
    if test $enableval != "no" ; then
       CPPFLAGS="-DJSONLINESSUPPORT $CPPFLAGS"
-      IPFIX_JSONLINES_SOURCES="ipfix_col_jsonlines.o json_util.o"
+      IPFIX_JSONLINES_OBJS="ipfix_jsonlines.o ipfix_col_jsonlines.o json_out.o"
    fi
 
 fi

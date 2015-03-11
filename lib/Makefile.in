@@ -43,7 +43,7 @@ CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
 
 TARGETS = ipfix_reverse_fields.h ipfix_def_fokus.h ipfix_fields_fokus.h ipfix_def_netscaler.h ipfix_fields_netscaler.h ipfix_reverse_fields_netscaler.h libipfix.a libipfix.so
 SOURCES = ipfix.c ipfix_col.c ipfix_col_jsonlines.c json_out.c ipfix_col_db.c ipfix_col_files.c ipfix_print.c
-OBJECTS = $(SOURCES:.c=.o) @IPFIX_JSONLINES_OBJ@ @IPFIX_DB_OBJ@ @IPFIX_SSL_OBJ@
+OBJECTS = $(SOURCES:.c=.o) @IPFIX_JSONLINES_OBJS@ @IPFIX_DB_OBJ@ @IPFIX_SSL_OBJ@ @IPFIX_FALLBACK_TEMPLATES_OBJS@
 DHPARAMS = dh512.pem dh1024.pem
 CLEANFILES = $(TARGETS) *.d *.o *.so *.so.$(VERSION)
 DISTCLEANFILES = $(CLEANFILES) $(DHPARAMS) Makefile

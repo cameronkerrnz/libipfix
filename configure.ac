@@ -64,6 +64,22 @@ AS_HELP_STRING([--disable-sctp],[disable sctp support])],
 AC_SUBST(SCTPLIBS)
 
 #
+# FALLBACK TEMPLATES support
+#################################################
+AC_ARG_ENABLE(fallback-templates,
+[
+AS_HELP_STRING([--enable-fallback-templates],[enable fallback-templates support])
+AS_HELP_STRING([--disable-fallback-templates],[disable fallback-templates support])],
+[
+   if test $enableval != "no" ; then
+      CPPFLAGS="-DFALLBACK_TEMPLATES_SUPPORT $CPPFLAGS"
+      IPFIX_FALLBACK_TEMPLATES_OBJS="$IPFIX_FALLBACK_TEMPLATES_OBSJ ipfix_fallback_templates_netscaler.o"
+   fi
+],
+[])
+AC_SUBST(IPFIX_FALLBACK_TEMPLATES_OBJS)
+
+#
 # JSONLINES support
 #################################################
 AC_ARG_ENABLE(jsonlines,

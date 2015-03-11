@@ -17,8 +17,9 @@ extern "C" {
 #endif
 
 #include <inttypes.h>
-#include <ipfix_def.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <ipfix_def.h>
 
 #ifndef ENOTSUP
 #define ENOTSUP EOPNOTSUPP

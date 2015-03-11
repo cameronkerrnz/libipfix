@@ -44,6 +44,7 @@ typedef struct ipfix_export_data_jsonlines
     FILE *json_file;
     char message_timestamp_str[JSON_MESSAGE_TIMESTAMP_SIZE];
     int json_record_unknown_sets;
+    ipfix_template_source_t template_source;
 } ipfixe_data_jsonlines_t;
 
 /*------ globals ---------------------------------------------------------*/
@@ -126,6 +127,8 @@ int ipfix_export_drecord_jsonlines( ipfixs_node_t      *s,
     }
 
     fprintf(data->json_file, ", \"ipfix_template_id\":\"%d\"", t->ipfixt->tid);
+
+    fprintf(data->json_file, ", \"ipfix_template_source\":\"%s\"", data->template_source ? "fallback" : "protocol");
 
     /* TODO The first attribute should be the template number.
      */
@@ -331,10 +334,22 @@ int ipfix_export_newmsg_jsonlines(ipfixs_node_t * s, ipfix_hdr_t * hdr, void * a
 
     strftime(data->message_timestamp_str, JSON_MESSAGE_TIMESTAMP_SIZE,
         "%Y-%m-%dT%H:%M:%SZ", &timestamp_tm);
-
 #endif
     return 0;
 }
+
+void ipfix_export_template_source_jsonlines(int template_id, ipfix_template_source_t source, void * arg)
+{
+#ifdef JSONLINESSUPPORT
+    ipfixe_data_jsonlines_t *data = (ipfixe_data_jsonlines_t*)arg;
+
+    fprintf(stderr, "Template source is %s for template ID %d\n",
+        (source == IPFIX_TEMPLATE_SOURCE_PROTOCOL) ? "protocol" : "fallback", template_id);
+
+    data->template_source = source;
+#endif
+}
+    
     
 int ipfix_export_init_jsonlines( char *jsonfile, int json_record_unknown_sets, void **arg )
 {
@@ -382,7 +397,6 @@ void ipfix_export_cleanup_jsonlines( void *arg )
 #endif
 }
 
-
 /*----- export funcs -----------------------------------------------------*/
 
 int ipfix_col_init_jsonlinesexport(
@@ -407,6 +421,7 @@ int ipfix_col_init_jsonlinesexport(
     g_colinfo->export_newsource                  = ipfix_export_newsource_jsonlines;
     g_colinfo->export_notify_no_template_for_set = ipfix_export_notify_no_template_for_set_jsonlines;
     g_colinfo->export_newmsg                     = ipfix_export_newmsg_jsonlines;
+    g_colinfo->export_template_source            = ipfix_export_template_source_jsonlines;
 
     g_colinfo->data = data;
 
