@@ -127,9 +127,9 @@ DATA RECORD:
 [ipfix_collector] got signo 2, bye.
 ~~~
 
-I've anonymised various fields.
-
-Now have a look at /tmp/data.json. Because its all one long line, I'll reformat it to show one line on multiple lines, using Python's pretty-printer.
+I've anonymised various fields.  Now have a look at /tmp/data.json. Because its
+all one long line, I'll reformat it to show one line on multiple lines, using
+Python's pretty-printer.
 
 ~~~
 $ tail -1 /tmp/data.json | python -mjson.tool
@@ -172,10 +172,370 @@ $ tail -1 /tmp/data.json | python -mjson.tool
 }
 ~~~
 
-At this point, its useful to remember that every LINE is a separate JSON document. But the FILE is *NOT* a valid JSON data-structure, so you can't process the file (or more than one line of the file) using a tool that expects JSON (unless it can handle JSONlines).
+At this point, its useful to remember that every LINE is a separate JSON
+document. But the FILE is **NOT** a valid JSON data-structure, so you can't
+process the file (or more than one line of the file) using a tool that expects
+JSON (unless it can handle JSONlines).
+
+Note: did you know that proper JSON says to escape the '/' character? That may
+come as something of a surprise to you. You'll also perhaps notice that the
+NetScaler logs already excape the URL according to the Common Logging Format
+(CLF) convention. I shall perhaps look at decoding them and encoding them as
+UTF-8, but that is not a priority.
 
 ~~~
 $ tail -2 /tmp/data.json | python -mjson.tool
 Extra data: line 2 column 1 - line 3 column 1 (char 911 - 2430)
 ~~~
- 
+
+Running as a daemon
+===
+
+FIXME: this feature coming soon
+
+
+Add a service account
+===
+
+I'll create a local user that this software will run as. That user will only
+need access to write to the log file. I suggest you set the group permissions
+for whatever will be reading the logs (eg. nxlog, as shown later). Naturally,
+change the path to suit your needs.
+
+~~~
+sudo /usr/sbin/useradd --system --user-group ipfix
+sudo install --directory --owner ipfix --group nxlog --mode 0750 /logs/current/ipfix/
+~~~
+
+Let's see how to run it by hand. Since it doesn't run as a daemon yet, I could run it using something like 'nohup', and redirect its (overly verbose) stdout/stderr to /dev/null, but for now, I'd prefer to run it inside of a 'screen' session.
+
+~~~
+screen -e^Bb -S ipfix
+^BA (set window's title to) ipfix collector
+sudo su - ipfix
+export LD_LIBRARY_PATH=/opt/libipfix/lib
+/opt/libipfix/bin/ipfix_collector -4 -u --json --jsonfile /logs/current/ipfix/data.json --fallback-templates=netscaler
+^Bd (detaches from screen session)
+~~~
+
+This ends up creating a process-tree like the following:
+
+~~~
+$ pstree
+init─┬─...
+     ...
+     ├─screen───bash───sudo───su───bash───ipfix_collector
+     ...
+~~~
+
+(Proper daemonisation will come, don't worry).
+
+
+Log files must be rotated
+===
+
+So now we have the process running, and logging data. Logging data needs to be
+rotated, so let's do that now before we forget and cause a problem later on.
+Assuming that you're running logrotate, creating a log rotation policy is fairly
+easy. Note that because we don't record a PID, as a proper daemon will, it may not
+work if there are multiple such processes found.
+
+~~~
+# cat /etc/logrotate.d/ipfix
+/logs/current/ipfix/data.json {
+    nodateext
+    rotate 3
+    daily
+    compress
+    delaycompress
+    postrotate
+        skill -HUP -u ipfix -c ipfix_collector
+    endscript
+}
+~~~
+
+Note that I've specified a rather short rotation lifetime, because I'm passing
+all this to nxlog, and nxlog will be looking after retention. Alter to suit
+your environment and needs.
+
+Force a rotation and check that a new file has opened. I like to make my files
+in /etc/logrotate.d/ fairly standalone so I can force a rotation on a
+particular policy.
+
+~~~
+logrotate -f /etc/logrotate.d/ipfix
+~~~
+
+
+Do something with the data
+===
+
+Where you put the file and what you do with it will depend on your use-case. I
+will show you how you can use nxlog to tail the file, add some extra
+information, and send it on to something like Logstash and Elasticsearch, where
+you can then view it with Kibana.
+
+Read the data with nxlog and forward it to logstash
+===
+
+Note that logstash can tail a file (I believe), but I prefer to have the data
+go into nxlog, because I set nxlog the task of managing data retention, and it
+will add some extra data which will help me use the data inside of the rest of
+my logging system. Nothing about this program requires (or even knows about)
+nxlog, or ELK. Its only assumption is that you can tail a file where each line
+is a JSON document.
+
+Here is about the simplest config for nxlog that will read the file, add some
+extra data (for illustration), and send it to logstash.
+
+~~~
+<Input in_ipfix_netscalers>
+    Module        im_file
+    File          "/logs/current/ipfix/data.json"
+    SavePos       TRUE
+    ReadFromLast  TRUE
+    InputType     LineBased
+    Exec          parse_json(); \
+                  $SITE_application_stack = "some_group_of_netscalers"; \
+                  $SITE_log_type = "ipfix_appflow"; \
+                  $SITE_environment = "dev"; \
+                  $EventTime = parsedate($ipfix_timestamp);
+</Input>
+
+# IMPORTANT
+# =========
+#
+# When receiving input as JSON, and then modifying it, beware that the default
+# presentation of the output is the same as the input. So, if you add
+# SITE_application_stack etc. to the incoming object, and then proceed to write
+# it out without having first had to_json() applied to it, you will not get the
+# SITE_application_stack attribute added to the outgoing JSON document; this
+# messes up the message routing. So remember to apply to_json() in each output
+# that is outputting JSON (and similarly for any other such output).
+#
+<Output out_logstash>
+    Module      om_tcp
+    Host        mylogstash.example.com
+    Port        5140
+    Exec        to_json();
+</Output>
+
+<Route route_all>
+    Path  in_ipfix_netscalers => out_logstash
+</Route>
+~~~
+
+From nxlog, you may not do anything further, but if you like to process things
+further in the likes of logstash (eg. putting different major systems in
+different sets of indexes inside Elasticsearch), then you may need something
+like the followig snippets (treat these as inspiration). Before we go further,
+just check your nxlog logging in case of an error.  You could even verify that
+it sending data to logstash with tcpdump (assuming that tcpdump is up at the time).
+
+~~~
+tcpdump -q -p -nn -s0 -i lo -A tcp and port 5140 | grep netscalers
+~~~
+
+Here's the start of a suitable logstash configuration.
+
+~~~
+input
+{
+    tcp
+    {
+        host => "0.0.0.0"
+        port => 5140
+        mode => "server"
+        codec => "json_lines"
+    }
+}
+
+filter
+{
+    # We create a different index for each day, which makes removing old data
+    # fairly easy. It also means that we can optimise old indexes (which we
+    # shouldn't need to do unless we've deleted documents from an index), or
+    # reduce the number of replicas for old data, or change where an index is
+    # stored.
+    #
+    # Some application stacks are very heavy in terms of log volume. To
+    # give us more flexibility in how we handle those indexes (such as
+    # removing or reducing replica count earlier than we would otherwise),
+    # we can put them into different indexes in a case-by-case basis, and
+    # the rest will go into a common index.
+    #
+    # Note that the variable name must be lowercased in the template name
+    # (and ONLY in the template name); I think it is interpreted by Elastic
+    # Search, not by LogStash, and ES seems to want it lowercase.
+    #
+    # One symptom of the template not applying is that the .raw attributes,
+    # such as username.raw, aren't available.
+    #
+    if [SITE_application_stack] in ["bigone", "megaone", "netscalers"]
+    {
+        alter
+        {
+            add_field =>
+            {
+                "site_index_basename" => "%{SITE_application_stack}"
+            }
+        }
+    }
+    else
+    {
+        alter
+        {
+            add_field =>
+            {
+                "site_index_basename" => "logstash"
+            }
+        }
+    }
+
+    date
+    {
+        match => ["EventTime", "YYYY-MM-dd HH:mm:ss"]
+    }
+}
+
+output
+{
+    # Kibana 4 (up to at least beta 4) requires all nodes to be ES version 1.4.0+,
+    # as it doesn't know (although the data is there) how to differentiate a
+    # client node
+    #
+    # Doc: http://logstash.net/docs/1.4.2/outputs/elasticsearch_http
+    #
+    elasticsearch_http
+    {
+        host => "127.0.0.1"
+        template_name => "%{site_index_basename}"
+        index => "%{site_index_basename}-%{+YYYY.MM.dd}"
+    }
+}
+~~~
+
+There are other common things you could do, such as geoip lookups and user-agent breakdown, but that's well outside the scope of this document.
+
+If you are sorting things into different groups of indexes, then you may need to do something with your templates in Elasticsearch. Access the REST interface (I suggest using the Koph plugin -- use whatever you are comfortable with) and get the template for 'logstash'.
+
+~~~
+# curl -XGET localhost:9200/_template/logstash?pretty
+{
+  "logstash" : {
+    "order" : 0,
+    "template" : "logstash-*",
+    "settings" : {
+      "index.refresh_interval" : "30s",
+      "index.number_of_replicas" : "1"
+    },
+    "mappings" : {
+      "_default_" : {
+        "dynamic_templates" : [ {
+          "string_fields" : {
+            "mapping" : {
+              "index" : "analyzed",
+              "omit_norms" : true,
+              "type" : "string",
+              "fields" : {
+                "raw" : {
+                  "ignore_above" : 256,
+                  "index" : "not_analyzed",
+                  "type" : "string"
+                }
+              }
+            },
+            "match_mapping_type" : "string",
+            "match" : "*"
+          }
+        } ],
+        "properties" : {
+          "geoip" : {
+            "path" : "full",
+            "dynamic" : true,
+            "type" : "object",
+            "properties" : {
+              "location" : {
+                "type" : "geo_point"
+              }
+            }
+          },
+          "@version" : {
+            "index" : "not_analyzed",
+            "type" : "string"
+          }
+        },
+        "_all" : {
+          "enabled" : true
+        }
+      }
+    },
+    "aliases" : { }
+  }
+}
+~~~
+
+I increase the refresh interval to about 30s for larger things (this is more efficient). Change the bit where it says "logstash-*" to be "netscalers-*", and removing the outer layering as shown, PUT the new template.
+
+~~~
+curl -XPUT localhost:9200/_template/netscalers -d '
+{
+  "template" : "netscalers-*",
+  "settings" : {
+    "index.refresh_interval" : "30s",
+    "index.number_of_replicas" : "1"
+  },
+  "mappings" : {
+    "_default_" : {
+      "dynamic_templates" : [ {
+        "string_fields" : {
+          "mapping" : {
+            "index" : "analyzed",
+            "omit_norms" : true,
+            "type" : "string",
+            "fields" : {
+              "raw" : {
+                "ignore_above" : 256,
+                "index" : "not_analyzed",
+                "type" : "string"
+              }
+            }
+          },
+          "match_mapping_type" : "string",
+          "match" : "*"
+        }
+      } ],
+      "properties" : {
+        "geoip" : {
+          "path" : "full",
+          "dynamic" : true,
+          "type" : "object",
+          "properties" : {
+            "location" : {
+              "type" : "geo_point"
+            }
+          }
+        },
+        "@version" : {
+          "index" : "not_analyzed",
+          "type" : "string"
+        }
+      },
+      "_all" : {
+        "enabled" : true
+      }
+    }
+  },
+  "aliases" : { }
+}
+'
+~~~
+
+NOTE: I have not attempted to optimise the mapping that this template would produce. I know there is plenty of work in that area that could be done.
+
+Make sure you get the following output
+
+~~~
+{"acknowledged":true}
+~~~
+
