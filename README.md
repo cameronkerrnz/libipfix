@@ -29,7 +29,7 @@ As for Red Hat Enterprise Linux 6. I hope to make an RPM for the next release.
 
 ~~~
 sudo yum install "@Development Tools" libpcap-devel
-git clone https://cameronkerrnz@github.com/cameronkerrnz/libipfix.git
+git clone https://github.com/cameronkerrnz/libipfix.git
 cd libipfix
 ./configure --prefix=/opt/libipfix --enable-jsonlines --enable-fallback-templates
 make
