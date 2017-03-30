@@ -678,6 +678,17 @@ int ipfix_get_eno_ieid( char *field, int *eno, int *ieid )
  */
 int ipfix_init( void )
 {
+    time_t tstart = time(NULL);
+    return ipfix_init_with_start_time(tstart);
+}
+
+/*
+ * name:        ipfix_init_with_start_time()
+ * parameters:  > tstart  time_t from which to calculate system uptime
+ * remarks:     init module, read field type info.
+ */
+int ipfix_init_with_start_time( time_t tstart )
+{
     /* check and store in global flag, 
      * whether we are on a Small or BigEndian machine */
     testEndianness(); 
@@ -693,7 +704,7 @@ int ipfix_init( void )
         return -1;
     }
 #endif
-    g_tstart = time(NULL);
+    g_tstart = tstart;
     signal( SIGPIPE, SIG_IGN );
     g_lasttid = 255;
 
