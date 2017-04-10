@@ -1,3 +1,12 @@
+DISCONTUING WORK ON THIS PROJECT
+===
+
+I'm going to look at using https://github.com/logstash-plugins/logstash-codec-netflow instead, which is at least more actively
+maintained than I can resource for this particular project.
+
+
+
+
 
 libipfix (forked version of 1.0 with many patches to make json-milestone-2 or so)
 
