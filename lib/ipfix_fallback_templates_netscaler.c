@@ -60,12 +60,13 @@ fallback_template_t netscaler_fallback_templates[] =
         }
       }
     , { 258
-      , 37    /* FIXME some say 38 (with netscaler_aaa_username) and some (that usually need a fallback) imply 37 (without netscaler_aaa_username), so reducing to 37 */
+      , 38    /* version specific? see "unknown_bytes" IE below */
       , {  {  0,     138,  4      }  /*  observationPointId                    */
         ,  {  0,     144,  4      }  /*  exportingProcessId                    */
         ,  {  0,     148,  8      }  /*  flowId                                */
         ,  {  5951,  129,  4      }  /*  netscaler_transaction_id              */
         ,  {  5951,  133,  4      }  /*  netscaler_connection_id               */
+        ,  {  5951,  999,  2      }  /*  unknown_bytes                         */
         ,  {  0,     60,   1      }  /*  ipVersion                             */
         ,  {  0,     4,    1      }  /*  protocolIdentifier                    */
         ,  {  0,     210,  2      }  /*  paddingOctets                         */
