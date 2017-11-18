@@ -200,7 +200,9 @@ Extra data: line 2 column 1 - line 3 column 1 (char 911 - 2430)
 Running as a daemon
 ===
 
-FIXME: this feature coming soon
+Run this under a system such as SystemD or Supervisord. I'm deploying this on RHEL6 with Supervisord installed from pip (and currently requires Python 2.7, which you can get from Red Hat's SCL channel.
+
+There is an example supervisord configuration in the doc/ directory.
 
 
 Add a service account
@@ -216,29 +218,13 @@ sudo /usr/sbin/useradd --system --user-group ipfix
 sudo install --directory --owner ipfix --group nxlog --mode 0750 /logs/current/ipfix/
 ~~~
 
-Let's see how to run it by hand. Since it doesn't run as a daemon yet, I could run it using something like 'nohup', and redirect its (overly verbose) stdout/stderr to /dev/null, but for now, I'd prefer to run it inside of a 'screen' session.
+Let's see how to run it by hand. 
 
 ~~~
-screen -e^Bb -S ipfix
-^BA (set window's title to) ipfix collector
 sudo su - ipfix
 export LD_LIBRARY_PATH=/opt/libipfix/lib
 /opt/libipfix/bin/ipfix_collector -4 -u --json --jsonfile /logs/current/ipfix/data.json --fallback-templates=netscaler
-^Bd (detaches from screen session)
 ~~~
-
-This ends up creating a process-tree like the following:
-
-~~~
-$ pstree
-init─┬─...
-     ...
-     ├─screen───bash───sudo───su───bash───ipfix_collector
-     ...
-~~~
-
-(Proper daemonisation will come, don't worry).
-
 
 Log files must be rotated
 ===
